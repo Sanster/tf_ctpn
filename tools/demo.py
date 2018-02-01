@@ -95,7 +95,12 @@ def demo(sess, net, image_name):
         cls_scores = scores[:, cls_ind]
         dets = np.hstack((cls_boxes,
                           cls_scores[:, np.newaxis])).astype(np.float32)
-        keep = nms(dets, NMS_THRESH)
+        force_cpu = False
+        if args.device == 'cpu':
+          force_cpu = True
+
+        keep = nms(dets, NMS_THRESH, force_cpu)
+
         dets = dets[keep, :]
         vis_detections(im, cls, dets, thresh=CONF_THRESH)
 
@@ -104,6 +109,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Tensorflow Faster R-CNN demo')
     parser.add_argument('--net', dest='demo_net', help='Network to use [vgg16 res101]',
                         choices=NETS.keys(), default='res101')
+    parser.add_argument('--device', help='cpu or gpu', default='cpu')
     parser.add_argument('--dataset', dest='dataset', help='Trained dataset [pascal_voc pascal_voc_0712]',
                         choices=DATASETS.keys(), default='pascal_voc_0712')
     args = parser.parse_args()
