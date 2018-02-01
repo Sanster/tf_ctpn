@@ -267,7 +267,7 @@ __C.MATLAB = 'matlab'
 __C.EXP_DIR = 'default'
 
 # Use GPU implementation of non-maximum suppression
-__C.USE_GPU_NMS = True
+__C.USE_GPU_NMS = False
 
 # Default pooling mode, only 'crop' is available
 __C.POOLING_MODE = 'crop'
