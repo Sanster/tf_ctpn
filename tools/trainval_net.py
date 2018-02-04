@@ -21,6 +21,7 @@ import tensorflow as tf
 from nets.vgg16 import vgg16
 from nets.resnet_v1 import resnetv1
 from nets.mobilenet_v1 import mobilenetv1
+from nets.ctpn import ctpn
 
 def parse_args():
   """
@@ -122,18 +123,19 @@ if __name__ == '__main__':
 
   # load network
   if args.net == 'vgg16':
-    net = vgg16()
+    conv = vgg16()
   elif args.net == 'res50':
-    net = resnetv1(num_layers=50)
+    conv = resnetv1(num_layers=50)
   elif args.net == 'res101':
-    net = resnetv1(num_layers=101)
+    conv = resnetv1(num_layers=101)
   elif args.net == 'res152':
-    net = resnetv1(num_layers=152)
+    conv = resnetv1(num_layers=152)
   elif args.net == 'mobile':
-    net = mobilenetv1()
+    conv = mobilenetv1()
   else:
     raise NotImplementedError
-    
+
+  net = ctpn(conv)
   train_net(net, imdb, roidb, valroidb, output_dir, tb_dir,
             pretrained_model=args.weight,
             max_iters=args.max_iters)
