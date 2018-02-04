@@ -52,6 +52,48 @@ def generate_anchors(base_size=16, ratios=[0.5, 1, 2],
   return anchors
 
 
+def generate_anchors_ctpn(base_size=11, anchors_size=10, anchor_width=16, h_ratio_step=0.7):
+  """
+  Generate anchor windows template by using different hight start from base_size
+  According to the ctpn paper, anchor's width is 16 pixels
+  """
+  base_anchor = np.array([1, 1, anchor_width, base_size]) - 1
+  h_ratios = h_ratio_step ** np.arange(0, anchors_size)
+
+  w, h, x_ctr, y_ctr = _whctrs(base_anchor)
+  ws = np.array([16 for _ in range(anchors_size)])
+  hs = np.ceil(base_size / h_ratios)
+  # anchor heights in ctpn sorce code
+  # assert np.equal(hs, [11, 16, 23, 33, 48, 68, 97, 139, 198, 283]).all()
+  anchors = _mkanchors(ws, hs, x_ctr, y_ctr)
+  return anchors
+
+
+def generate_anchors_pre_ctpn(height, width, feat_stride, anchor_width=16, anchor_h_ratio_step=0.7):
+  """
+  A wrapper function to generate anchors given by different height scale
+  :arg
+    height/width: height/width of last shared cnn layer feature map
+    feat_stride: total stride until the last shared cnn layer
+
+  :returns
+    anchors: anchors with on input image
+    length: The total number of anchors
+  """
+  anchors = generate_anchors_ctpn(h_ratio_step=anchor_h_ratio_step, anchor_width=anchor_width)
+  A = anchors.shape[0]
+  shift_x = np.arange(0, width) * feat_stride
+  shift_y = np.arange(0, height) * feat_stride
+  shift_x, shift_y = np.meshgrid(shift_x, shift_y)
+  shifts = np.vstack((shift_x.ravel(), shift_y.ravel(), shift_x.ravel(), shift_y.ravel())).transpose()
+  K = shifts.shape[0]
+  # width changes faster, so here it is H, W, C
+  anchors = anchors.reshape((1, A, 4)) + shifts.reshape((1, K, 4)).transpose((1, 0, 2))
+  anchors = anchors.reshape((K * A, 4)).astype(np.float32, copy=False)
+  length = np.int32(anchors.shape[0])
+
+  return anchors, length
+
 def _whctrs(anchor):
   """
   Return width, height, x center, and y center for an anchor (window).
@@ -112,6 +154,9 @@ if __name__ == '__main__':
   a = generate_anchors()
   print(time.time() - t)
   print(a)
+
+  c = generate_anchors_pre_ctpn(36, 57, 16)
+  print(c)
   from IPython import embed;
 
   embed()

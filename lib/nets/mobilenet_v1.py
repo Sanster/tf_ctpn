@@ -215,6 +215,7 @@ class mobilenetv1(Network):
     # Base bottleneck
     assert (0 <= cfg.MOBILENET.FIXED_LAYERS <= 12)
     net_conv = self._image
+    # fix 0 ~ FIXED_LAYERS layers
     if cfg.MOBILENET.FIXED_LAYERS > 0:
       with slim.arg_scope(mobilenet_v1_arg_scope(is_training=False)):
         net_conv = mobilenet_v1_base(net_conv,
@@ -223,6 +224,7 @@ class mobilenetv1(Network):
                                       depth_multiplier=self._depth_multiplier,
                                       reuse=reuse,
                                       scope=self._scope)
+    # get FIXED_LAYERS ~ 12 layers
     if cfg.MOBILENET.FIXED_LAYERS < 12:
       with slim.arg_scope(mobilenet_v1_arg_scope(is_training=is_training)):
         net_conv = mobilenet_v1_base(net_conv,

@@ -284,6 +284,14 @@ __C.ANCHOR_RATIOS = [0.5,1,2]
 # Number of filters for the RPN layer
 __C.RPN_CHANNELS = 512
 
+#
+# CTPN options
+#
+
+__C.CTPN = edict()
+
+__C.CTPN.ANCHOR_WIDTH = 16
+__C.CTPN.H_RADIO_STEP = 0.7
 
 def get_output_dir(imdb, weights_filename):
   """Return the directory where experimental artifacts are placed.
