@@ -11,6 +11,7 @@ from model.config import cfg
 import roi_data_layer.roidb as rdl_roidb
 from roi_data_layer.layer import RoIDataLayer
 from utils.timer import Timer
+import utils.common as common
 try:
   import cPickle as pickle
 except ImportError:
@@ -24,6 +25,8 @@ import time
 import tensorflow as tf
 from tensorflow.python import pywrap_tensorflow
 
+
+# noinspection PyAttributeOutsideInit
 class SolverWrapper(object):
   """
     A wrapper class for the training process
@@ -38,9 +41,9 @@ class SolverWrapper(object):
     self.tbdir = tbdir
     # Simply put '_val' at the end to save the summaries from the validation set
     self.tbvaldir = tbdir + '_val'
-    if not os.path.exists(self.tbvaldir):
-      os.makedirs(self.tbvaldir)
+    common.check_dir(self.tbvaldir)
     self.pretrained_model = pretrained_model
+
 
   def snapshot(self, sess, iter):
     net = self.net
@@ -119,8 +122,9 @@ class SolverWrapper(object):
       tf.set_random_seed(cfg.RNG_SEED)
       # Build the main computation graph
       layers = self.net.create_architecture('TRAIN', self.imdb.num_classes, tag='default',
-                                            anchor_scales=cfg.ANCHOR_SCALES,
-                                            anchor_ratios=cfg.ANCHOR_RATIOS)
+                                            anchor_width=cfg.CTPN.ANCHOR_WIDTH,
+                                            anchor_h_ratio_step=cfg.CTPN.H_RADIO_STEP,
+                                            num_anchors=cfg.CTPN.NUM_ANCHORS)
       # Define the loss
       loss = layers['total_loss']
       # Set learning rate and momentum
@@ -363,7 +367,7 @@ def filter_roidb(roidb):
 def train_net(network, imdb, roidb, valroidb, output_dir, tb_dir,
               pretrained_model=None,
               max_iters=40000):
-  """Train a Faster R-CNN network."""
+  """Train a CTPN network."""
   roidb = filter_roidb(roidb)
   valroidb = filter_roidb(valroidb)
 

@@ -30,8 +30,8 @@ def parse_args():
   parser = argparse.ArgumentParser(description='Train a Fast R-CNN network')
   parser.add_argument('--cfg', dest='cfg_file',
                       help='optional config file',
-                      default=None, type=str)
-  parser.add_argument('--weight', dest='weight',
+                      default='./experiments/cfgs/mobile.yml', type=str)
+  parser.add_argument('--pretrained_model', dest='pretrained ImageNet model',
                       help='initialize with pretrained model weights',
                       type=str)
   parser.add_argument('--imdb', dest='imdb_name',
@@ -53,9 +53,9 @@ def parse_args():
                       help='set config keys', default=None,
                       nargs=argparse.REMAINDER)
 
-  if len(sys.argv) == 1:
-    parser.print_help()
-    sys.exit(1)
+  # if len(sys.argv) == 1:
+  #   parser.print_help()
+  #   sys.exit(1)
 
   args = parser.parse_args()
   return args
@@ -86,8 +86,16 @@ def combined_roidb(imdb_names):
   return imdb, roidb
 
 
+def setup_for_debug(args):
+  args.net = 'mobile'
+  args.cfg_file = './experiments/cfgs/mobile.yml'
+  args.pretrained_model = './data/imagenet_weights/mobilenet_v1_1.0_224.ckpt'
+  args.imdb_name = 'voc_2007_trainval'
+
 if __name__ == '__main__':
   args = parse_args()
+
+  setup_for_debug(args)
 
   print('Called with args:')
   print(args)
@@ -123,19 +131,18 @@ if __name__ == '__main__':
 
   # load network
   if args.net == 'vgg16':
-    conv = vgg16()
+    net = vgg16()
   elif args.net == 'res50':
-    conv = resnetv1(num_layers=50)
+    net = resnetv1(num_layers=50)
   elif args.net == 'res101':
-    conv = resnetv1(num_layers=101)
+    net = resnetv1(num_layers=101)
   elif args.net == 'res152':
-    conv = resnetv1(num_layers=152)
+    net = resnetv1(num_layers=152)
   elif args.net == 'mobile':
-    conv = mobilenetv1()
+    net = mobilenetv1()
   else:
     raise NotImplementedError
 
-  net = ctpn(conv)
   train_net(net, imdb, roidb, valroidb, output_dir, tb_dir,
-            pretrained_model=args.weight,
+            pretrained_model=args.pretrained_model,
             max_iters=args.max_iters)

@@ -23,6 +23,8 @@ from utils.visualization import draw_bounding_boxes
 
 from model.config import cfg
 
+
+# noinspection PyAttributeOutsideInit,PyProtectedMember,PyMethodMayBeStatic,PyUnresolvedReferences
 class Network(object):
   def __init__(self):
     self._predictions = {}
@@ -289,19 +291,61 @@ class Network(object):
 
     return loss
 
+  def _BiLstm(self, input, d_i, d_o, hidden_num, name, initializer, is_training=True):
+    img = input
+    with tf.variable_scope(name) as scope:
+      shape = tf.shape(img)
+      N, H, W, C = shape[0],shape[1],shape[2],shape[3]
+      img = tf.reshape(img, [N * H, W, C])
+      img.set_shape([None, None, d_i])
+
+      lstm_fw_cell = tf.contrib.rnn.LSTMCell(hidden_num, state_is_tuple=True)
+      lstm_bw_cell = tf.contrib.rnn.LSTMCell(hidden_num, state_is_tuple=True)
+
+      lstm_out, last_state = tf.nn.bidirectional_dynamic_rnn(lstm_fw_cell, lstm_bw_cell, img, dtype=tf.float32)
+      lstm_out = tf.concat(lstm_out, axis=-1)
+      lstm_out = tf.reshape(lstm_out, [N * H * W, 2 * hidden_num])
+
+      outputs = slim.fully_connected(lstm_out, d_o,
+                                     weights_initializer=initializer,
+                                     trainable=is_training,
+                                     activation_fn=None)
+
+      # init_weights = tf.truncated_normal_initializer(stddev=0.1)
+      # init_biases = tf.constant_initializer(0.0)
+      # weights = self._make_var('weights', [2 * hidden_num, d_o], init_weights, is_training, \
+      #                         regularizer=self.l2_regularizer(cfg.TRAIN.WEIGHT_DECAY))
+      # biases = self._make_var('biases', [d_o], init_biases, is_training)
+      # outputs = tf.matmul(lstm_out, weights) + biases
+
+      return outputs
+
+  def _make_var(self, name, shape, initializer=None, trainable=True, regularizer=None):
+    return tf.get_variable(name, shape, initializer=initializer, trainable=trainable, regularizer=regularizer)
+
   def _region_proposal(self, net_conv, is_training, initializer):
     rpn = slim.conv2d(net_conv, cfg.RPN_CHANNELS, [3, 3], trainable=is_training, weights_initializer=initializer,
                         scope="rpn_conv/3x3")
     self._act_summaries.append(rpn)
-    rpn_cls_score = slim.conv2d(rpn, self._num_anchors * 2, [1, 1], trainable=is_training,
+
+    lstm_output = 512
+    bi_lstm = self._BiLstm(rpn, cfg.RPN_CHANNELS, lstm_output, hidden_num=128, name="bi_lstm", initializer=initializer, is_training=is_training)
+
+    # reshape to [N, H, W, C] for 1x1 conv operate
+    shape = tf.shape(rpn)
+    N, H, W, _ = shape[0],shape[1],shape[2],shape[3]
+    bi_lstm_reshape = tf.reshape(bi_lstm, [N, H, W, lstm_output])
+
+    rpn_cls_score = slim.conv2d(bi_lstm_reshape, self._num_anchors * 2, [1, 1], trainable=is_training,
                                 weights_initializer=initializer,
                                 padding='VALID', activation_fn=None, scope='rpn_cls_score')
+
     # change it so that the score has 2 as its channel size
     rpn_cls_score_reshape = self._reshape_layer(rpn_cls_score, 2, 'rpn_cls_score_reshape')
     rpn_cls_prob_reshape = self._softmax_layer(rpn_cls_score_reshape, "rpn_cls_prob_reshape")
     rpn_cls_pred = tf.argmax(tf.reshape(rpn_cls_score_reshape, [-1, 2]), axis=1, name="rpn_cls_pred")
     rpn_cls_prob = self._reshape_layer(rpn_cls_prob_reshape, self._num_anchors * 2, "rpn_cls_prob")
-    rpn_bbox_pred = slim.conv2d(rpn, self._num_anchors * 4, [1, 1], trainable=is_training,
+    rpn_bbox_pred = slim.conv2d(bi_lstm_reshape, self._num_anchors * 4, [1, 1], trainable=is_training,
                                 weights_initializer=initializer,
                                 padding='VALID', activation_fn=None, scope='rpn_bbox_pred')
     if is_training:
@@ -353,7 +397,7 @@ class Network(object):
     raise NotImplementedError
 
   def create_architecture(self, mode, num_classes, tag=None,
-                          anchor_scales=(8, 16, 32), anchor_ratios=(0.5, 1, 2)):
+                          anchor_width=16, anchor_h_ratio_step=0.7, num_anchors=10):
     self._image = tf.placeholder(tf.float32, shape=[1, None, None, 3])
     self._im_info = tf.placeholder(tf.float32, shape=[3])
     self._gt_boxes = tf.placeholder(tf.float32, shape=[None, 5])
@@ -361,13 +405,11 @@ class Network(object):
 
     self._num_classes = num_classes
     self._mode = mode
-    self._anchor_scales = anchor_scales
-    self._num_scales = len(anchor_scales)
 
-    self._anchor_ratios = anchor_ratios
-    self._num_ratios = len(anchor_ratios)
+    self._anchor_width = anchor_width
+    self._anchor_h_ratio_step = anchor_h_ratio_step
 
-    self._num_anchors = self._num_scales * self._num_ratios
+    self._num_anchors = num_anchors
 
     training = mode == 'TRAIN'
     testing = mode == 'TEST'
@@ -382,7 +424,7 @@ class Network(object):
       biases_regularizer = tf.no_regularizer
 
     # list as many types of layers as possible, even if they are not used now
-    with arg_scope([slim.conv2d, slim.conv2d_in_plane, \
+    with arg_scope([slim.conv2d, slim.conv2d_in_plane,
                     slim.conv2d_transpose, slim.separable_conv2d, slim.fully_connected], 
                     weights_regularizer=weights_regularizer,
                     biases_regularizer=biases_regularizer, 
@@ -395,9 +437,8 @@ class Network(object):
       self._train_summaries.append(var)
 
     if testing:
-      # TODO: Why std and mean?
-      stds = np.tile(np.array(cfg.TRAIN.BBOX_NORMALIZE_STDS), (self._num_classes))
-      means = np.tile(np.array(cfg.TRAIN.BBOX_NORMALIZE_MEANS), (self._num_classes))
+      stds = np.tile(np.array(cfg.TRAIN.BBOX_NORMALIZE_STDS), self._num_classes)
+      means = np.tile(np.array(cfg.TRAIN.BBOX_NORMALIZE_MEANS), self._num_classes)
       self._predictions["bbox_pred"] *= stds
       self._predictions["bbox_pred"] += means
     else:

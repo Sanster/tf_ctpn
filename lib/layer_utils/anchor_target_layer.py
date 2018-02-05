@@ -16,7 +16,13 @@ from utils.cython_bbox import bbox_overlaps
 from model.bbox_transform import bbox_transform
 
 def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride, all_anchors, num_anchors):
-  """Same as the anchor target layer in original Fast/er RCNN """
+  """
+  Same as the anchor target layer in original Fast/er RCNN
+  :param
+    rpn_cls_score: (1, H, W, Ax2) bg/fg scores of previous conv layer
+    gt_boxes: (G, 5) vstack of [x1, y1, x2, y2, class]
+    im_info: [image_height, image_width]
+  """
   A = num_anchors
   total_anchors = all_anchors.shape[0]
   K = total_anchors / num_anchors
