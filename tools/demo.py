@@ -31,34 +31,7 @@ from nets.vgg16 import vgg16
 from nets.resnet_v1 import resnetv1
 from nets.mobilenet_v1 import mobilenetv1
 
-CLASSES = ('__background__',
-           'aeroplane', 'bicycle', 'bird', 'boat',
-           'bottle', 'bus', 'car', 'cat', 'chair',
-           'cow', 'diningtable', 'dog', 'horse',
-           'motorbike', 'person', 'pottedplant',
-           'sheep', 'sofa', 'train', 'tvmonitor')
-
-COCO_CLASSES = ('__background__', 'person', 'bicycle', 'car', 'motorcycle', 'airplane'
-                , 'bus', 'train', 'truck', 'boat'
-                , 'traffic light', 'fire hydrant', 'stop sign', 'parking meter'
-                , 'bench', 'bird', 'cat', 'dog', 'horse'
-                , 'sheep', 'cow', 'elephant', 'bear', 'zebra'
-                , 'giraffe', 'backpack', 'umbrella', 'handbag', 'tie'
-                , 'suitcase', 'frisbee', 'skis', 'snowboard', 'sports ball'
-                , 'kite', 'baseball bat', 'baseball glove', 'skateboard'
-                , 'tennis racket', 'bottle', 'wine glass', 'cup', 'fork'
-                , 'knife', 'spoon', 'bowl', 'banana', 'apple', 'sandwich'
-                , 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut'
-                , 'cake', 'chair', 'couch', 'potted plant', 'bed', 'dining table'
-                , 'toilet', 'tv', 'laptop', 'mouse', 'remote', 'keyboard'
-                , 'cell phone', 'microwave', 'oven', 'toaster', 'sink', 'refrigerator'
-                , 'book', 'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush')
-
-NETS = {
-    'vgg16': ('vgg16_faster_rcnn_iter_70000.ckpt',),
-    'res101': ('res101_faster_rcnn_iter_110000.ckpt',),
-    'mobile': ('mobile_faster_rcnn_iter_1190000.ckpt',)
-}
+CLASSES = ('__background__', 'text')
 
 DATASETS = {
     'pascal_voc': ('voc_2007_trainval',),
@@ -115,7 +88,7 @@ def demo(sess, net, image_name, classes):
     print('Detection took {:.3f}s for {:d} object proposals'.format(timer.total_time, boxes.shape[0]))
 
     # Visualize detections for each class
-    CONF_THRESH = 0.8
+    CONF_THRESH = 0.7
     NMS_THRESH = 0.3
     for cls_ind, cls in enumerate(classes[1:]):
         cls_ind += 1  # because we skipped background
@@ -134,9 +107,9 @@ def parse_args():
     """Parse input arguments."""
     parser = argparse.ArgumentParser(description='Tensorflow Faster R-CNN demo')
     parser.add_argument('--net', dest='demo_net', help='Network to use [vgg16 res101 mobile]',
-                        choices=NETS.keys(), default='mobile')
+                        choices='mobile', default='mobile')
     parser.add_argument('--dataset', dest='dataset', help='Trained dataset [pascal_voc pascal_voc_0712 coco]',
-                        choices=DATASETS.keys(), default='coco')
+                        choices=DATASETS.keys(), default='pascal_voc')
     args = parser.parse_args()
 
     return args
@@ -149,19 +122,15 @@ if __name__ == '__main__':
     # model path
     demonet = args.demo_net
     dataset = args.dataset
-    tfmodel = os.path.join('output', demonet, DATASETS[dataset][0], 'default',
-                           NETS[demonet][0])
 
-    if not os.path.isfile(tfmodel + '.meta'):
-        raise IOError(('{:s} not found.\nDid you download the proper networks from '
-                       'our server and place them properly?').format(tfmodel + '.meta'))
+    ckpt_dir = os.path.join('output', demonet, DATASETS[dataset][0], 'default')
+    ckpt = tf.train.get_checkpoint_state(ckpt_dir)
 
     # set config
     tfconfig = tf.ConfigProto(allow_soft_placement=True)
     tfconfig.gpu_options.allow_growth = True
 
     # init session
-    anchor_ratios = [0.5, 1, 2]
     sess = tf.Session(config=tfconfig)
     # load network
     if demonet == 'vgg16':
@@ -170,33 +139,25 @@ if __name__ == '__main__':
         net = resnetv1(num_layers=101)
     elif demonet == 'mobile':
         net = mobilenetv1()
-        anchor_ratios.append(1.5)
     else:
         raise NotImplementedError
 
-    num_classes = 21
-    if dataset == 'coco':
-        num_classes = 81
-
-    net.create_architecture("TEST", num_classes,
-                            tag='default', anchor_scales=[8, 16, 32],
-                            anchor_ratios=anchor_ratios)
+    net.create_architecture("TEST",
+                            num_classes=len(CLASSES),
+                            tag='default',
+                            anchor_width=16,
+                            anchor_h_ratio_step=0.7,
+                            num_anchors=10)
     saver = tf.train.Saver()
-    saver.restore(sess, tfmodel)
+    saver.restore(sess, ckpt.model_checkpoint_path)
 
-    print('Loaded network {:s}'.format(tfmodel))
+    print('Loaded network {:s}'.format(ckpt.model_checkpoint_path))
 
-    im_names = ['000456.jpg', '000542.jpg', '001150.jpg',
-                '001763.jpg', '004545.jpg']
-
-    if args.dataset == 'coco':
-        classes = COCO_CLASSES
-    else:
-        classes = CLASSES
+    im_names = ['007.jpg']
 
     for im_name in im_names:
         print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
         print('Demo for data/demo/{}'.format(im_name))
-        demo(sess, net, im_name, classes)
+        demo(sess, net, im_name, CLASSES)
 
     plt.show()
