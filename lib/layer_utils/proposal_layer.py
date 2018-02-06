@@ -14,8 +14,12 @@ from model.nms_wrapper import nms
 
 
 def proposal_layer(rpn_cls_prob, rpn_bbox_pred, im_info, cfg_key, _feat_stride, anchors, num_anchors):
-  """A simplified version compared to fast/er RCNN
-     For details please see the technical report
+  """
+  A simplified version compared to fast/er RCNN
+  For details please see the technical report
+  :param
+    rpn_cls_prob: softmax result of rpn scores
+    rpn_bbox_pred: 1x1 conv result for rpn bbox
   """
   if type(cfg_key) == bytes:
       cfg_key = cfg_key.decode('utf-8')

@@ -92,6 +92,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride, all_anch
     labels[disable_inds] = -1
 
   bbox_targets = np.zeros((len(inds_inside), 4), dtype=np.float32)
+  # get rpn_bbox_targets in delta format, the predict result of rpn is (tx, ty, tw, th)
   bbox_targets = _compute_targets(anchors, gt_boxes[argmax_overlaps, :])
 
   bbox_inside_weights = np.zeros((len(inds_inside), 4), dtype=np.float32)

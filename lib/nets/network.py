@@ -99,6 +99,9 @@ class Network(object):
     return rois, rpn_scores
 
   def _proposal_layer(self, rpn_cls_prob, rpn_bbox_pred, name):
+    """
+    Do nms -> topN -> apply rpn_bbox_pred to anchors(bbox_transform_inv)
+    """
     with tf.variable_scope(name) as scope:
       rois, rpn_scores = tf.py_func(proposal_layer,
                                     [rpn_cls_prob, rpn_bbox_pred, self._im_info, self._mode,
@@ -139,6 +142,12 @@ class Network(object):
     return tf.nn.dropout(bottom, ratio, name=name)
 
   def _anchor_target_layer(self, rpn_cls_score, name):
+    """
+    Filter percomputed anchors and get anchor labels(positive negative or don't care) by IoU (each anchor's overlap with gt box)
+    Only use anchors inside the image
+    :param rpn_cls_score: positive and negative score for each anchor
+    :return rpn_labels: positive negative or don't care
+    """
     with tf.variable_scope(name) as scope:
       rpn_labels, rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights = tf.py_func(
         anchor_target_layer,
@@ -210,18 +219,23 @@ class Network(object):
       initializer = tf.random_normal_initializer(mean=0.0, stddev=0.01)
       initializer_bbox = tf.random_normal_initializer(mean=0.0, stddev=0.001)
 
+    # Mobile net_conv: (1, H, W, 512)
     net_conv = self._image_to_head(is_training)
     with tf.variable_scope(self._scope, self._scope):
       # build the anchors for the image
       self._anchor_component()
       # region proposal network
+      # Mobile rois: (cfg.TRAIN.BATCH_SIZE, 5) = (256, 5), (x1,y1,x2,y2,score)
       rois = self._region_proposal(net_conv, is_training, initializer)
       # region of interest pooling
       if cfg.POOLING_MODE == 'crop':
+        # get croped roi on conv_net
+        # Mobile pool5: (256, 7, 7, 512)
         pool5 = self._crop_pool_layer(net_conv, rois, "pool5")
       else:
         raise NotImplementedError
 
+    # Mobile fc7: (256, 1024)
     fc7 = self._head_to_tail(pool5, is_training)
     with tf.variable_scope(self._scope, self._scope):
       # region classification
@@ -247,12 +261,13 @@ class Network(object):
     ))
     return loss_box
 
-  def _add_losses(self, sigma_rpn=3.0):
+  def _build_losses(self, sigma_rpn=3.0):
     with tf.variable_scope('LOSS_' + self._tag) as scope:
       # RPN, class loss
       rpn_cls_score = tf.reshape(self._predictions['rpn_cls_score_reshape'], [-1, 2])
       rpn_label = tf.reshape(self._anchor_targets['rpn_labels'], [-1])
       rpn_select = tf.where(tf.not_equal(rpn_label, -1))
+      # only get positive and negative score/label
       rpn_cls_score = tf.reshape(tf.gather(rpn_cls_score, rpn_select), [-1, 2])
       rpn_label = tf.reshape(tf.gather(rpn_label, rpn_select), [-1])
       rpn_cross_entropy = tf.reduce_mean(
@@ -336,6 +351,7 @@ class Network(object):
     N, H, W, _ = shape[0],shape[1],shape[2],shape[3]
     bi_lstm_reshape = tf.reshape(bi_lstm, [N, H, W, lstm_output])
 
+    # use 1x1 conv as FC (N, H, W, num_anchors * 2)
     rpn_cls_score = slim.conv2d(bi_lstm_reshape, self._num_anchors * 2, [1, 1], trainable=is_training,
                                 weights_initializer=initializer,
                                 padding='VALID', activation_fn=None, scope='rpn_cls_score')
@@ -343,8 +359,14 @@ class Network(object):
     # change it so that the score has 2 as its channel size
     rpn_cls_score_reshape = self._reshape_layer(rpn_cls_score, 2, 'rpn_cls_score_reshape')
     rpn_cls_prob_reshape = self._softmax_layer(rpn_cls_score_reshape, "rpn_cls_prob_reshape")
+
+    # get positive text score
     rpn_cls_pred = tf.argmax(tf.reshape(rpn_cls_score_reshape, [-1, 2]), axis=1, name="rpn_cls_pred")
+
+    # get correct shape for softmax result (N, H, W, num_anchors*2)
     rpn_cls_prob = self._reshape_layer(rpn_cls_prob_reshape, self._num_anchors * 2, "rpn_cls_prob")
+
+    # use 1x1 conv as FC
     rpn_bbox_pred = slim.conv2d(bi_lstm_reshape, self._num_anchors * 4, [1, 1], trainable=is_training,
                                 weights_initializer=initializer,
                                 padding='VALID', activation_fn=None, scope='rpn_bbox_pred')
@@ -442,7 +464,7 @@ class Network(object):
       self._predictions["bbox_pred"] *= stds
       self._predictions["bbox_pred"] += means
     else:
-      self._add_losses()
+      self._build_losses()
       layers_to_output.update(self._losses)
 
       val_summaries = []
