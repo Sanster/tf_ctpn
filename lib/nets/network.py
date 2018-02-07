@@ -370,6 +370,7 @@ class Network(object):
     rpn_bbox_pred = slim.conv2d(bi_lstm_reshape, self._num_anchors * 4, [1, 1], trainable=is_training,
                                 weights_initializer=initializer,
                                 padding='VALID', activation_fn=None, scope='rpn_bbox_pred')
+
     if is_training:
       rois, roi_scores = self._proposal_layer(rpn_cls_prob, rpn_bbox_pred, "rois")
       rpn_labels = self._anchor_target_layer(rpn_cls_score, "anchor")
@@ -420,8 +421,8 @@ class Network(object):
 
   def create_architecture(self, mode, num_classes, tag=None,
                           anchor_width=16, anchor_h_ratio_step=0.7, num_anchors=10):
-    self._image = tf.placeholder(tf.float32, shape=[1, None, None, 3])
-    self._im_info = tf.placeholder(tf.float32, shape=[3])
+    self._image = tf.placeholder(tf.float32, shape=[1, None, None, 3], name='input')
+    self._im_info = tf.placeholder(tf.float32, shape=[3], name='im_info')
     self._gt_boxes = tf.placeholder(tf.float32, shape=[None, 5])
     self._tag = tag
 

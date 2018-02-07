@@ -153,7 +153,7 @@ if __name__ == '__main__':
 
     print('Loaded network {:s}'.format(ckpt.model_checkpoint_path))
 
-    im_names = ['007.jpg']
+    im_names = ['007.jpg', 'vin1.jpg', 'vin2.jpg', 'vin3.jpg', 'vin4.jpg', 'vin5.jpg']
 
     for im_name in im_names:
         print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
