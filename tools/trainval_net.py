@@ -26,7 +26,7 @@ def parse_args():
   """
   Parse input arguments
   """
-  parser = argparse.ArgumentParser(description='Train a Fast R-CNN network')
+  parser = argparse.ArgumentParser(description='Train a CTPN network')
   parser.add_argument('--cfg', dest='cfg_file',
                       help='optional config file',
                       default='./experiments/cfgs/mobile.yml', type=str)
@@ -88,7 +88,7 @@ def combined_roidb(imdb_names):
 def setup_for_debug(args):
   args.net = 'mobile'
   args.cfg_file = './experiments/cfgs/mobile.yml'
-  args.pretrained_model = './data/imagenet_weights/mobilenet_v1_1.0_224.ckpt'
+  args.pretrained_model = './data/imagenet_weights/mobilenet/mobilenet_v1_1.0_224.ckpt'
   args.imdb_name = 'voc_2007_trainval'
 
 if __name__ == '__main__':
