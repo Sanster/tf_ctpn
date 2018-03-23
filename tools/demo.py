@@ -15,6 +15,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import glob
+
 import _init_paths
 from model.config import cfg
 from model.test import im_detect
@@ -36,7 +38,7 @@ from nets.mobilenet_v1 import mobilenetv1
 CLASSES = ('__background__', 'text')
 
 
-def vis_detections(im, class_name, dets, thresh=0.5):
+def vis_detections(im, class_name, dets, thresh=0.5, text=False):
     """Draw detected bounding boxes."""
     inds = np.where(dets[:, -1] >= thresh)[0]
     if len(inds) == 0:
@@ -55,10 +57,12 @@ def vis_detections(im, class_name, dets, thresh=0.5):
                           bbox[3] - bbox[1], fill=False,
                           edgecolor='red', linewidth=3.5)
         )
-        ax.text(bbox[0], bbox[1] - 2,
-                '{:s} {:.3f}'.format(class_name, score),
-                bbox=dict(facecolor='blue', alpha=0.5),
-                fontsize=14, color='white')
+
+        if text:
+            ax.text(bbox[0], bbox[1] - 2,
+                    '{:s} {:.3f}'.format(class_name, score),
+                    bbox=dict(facecolor='blue', alpha=0.5),
+                    fontsize=14, color='white')
 
     ax.set_title(('{} detections with '
                   'p({} | box) >= {:.1f}').format(class_name, class_name,
@@ -67,13 +71,13 @@ def vis_detections(im, class_name, dets, thresh=0.5):
     plt.axis('off')
     plt.tight_layout()
     plt.draw()
+    plt.show()
 
 
-def demo(sess, net, image_name, classes):
+def demo(sess, net, im_file, classes):
     """Detect object classes in an image using pre-computed object proposals."""
 
     # Load the demo image
-    im_file = os.path.join(cfg.DATA_DIR, 'demo', image_name)
     im = cv2.imread(im_file)
 
     # Detect all object classes and regress object bounds
@@ -107,8 +111,13 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Tensorflow CTPN demo')
     parser.add_argument('--net', dest='demo_net', help='Network to use [vgg16 res101 mobile]',
                         choices='mobile', default='mobile')
+    parser.add_argument('--img_dir', default='./data/demo')
     parser.add_argument('--tag', dest='dataset', help='model tag', default='default')
     args = parser.parse_args()
+
+    if not os.path.exists(args.img_dir):
+        print("img dir not exists.")
+        exit(-1)
 
     return args
 
@@ -151,11 +160,8 @@ if __name__ == '__main__':
 
     print('Loaded network {:s}'.format(ckpt.model_checkpoint_path))
 
-    im_names = ['007.jpg']
-
-    for im_name in im_names:
+    im_files = glob.glob(args.img_dir + "/*.*")
+    for im_file in im_files:
         print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-        print('Demo for data/demo/{}'.format(im_name))
-        demo(sess, net, im_name, CLASSES)
-
-    plt.show()
+        print('Demo for {}'.format(im_file))
+        demo(sess, net, im_file, CLASSES)

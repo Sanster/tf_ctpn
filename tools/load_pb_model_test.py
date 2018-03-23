@@ -135,4 +135,3 @@ if __name__ == '__main__':
             print('Demo for {}'.format(im_file))
             demo(sess, fetches, feeds, im_file, CLASSES)
 
-    plt.show()
