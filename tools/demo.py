@@ -19,12 +19,14 @@ import _init_paths
 from model.config import cfg
 from model.test import im_detect
 from model.nms_wrapper import nms
+from text_connector import TextDetector
 
 from utils.timer import Timer
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
-import os, cv2
+import os
+import cv2
 import argparse
 
 from nets.vgg16 import vgg16
@@ -32,12 +34,6 @@ from nets.resnet_v1 import resnetv1
 from nets.mobilenet_v1 import mobilenetv1
 
 CLASSES = ('__background__', 'text')
-
-DATASETS = {
-    'pascal_voc': ('voc_2007_trainval',),
-    'pascal_voc_0712': ('voc_2007_trainval+voc_2012_trainval',),
-    'coco': ('coco_2014_train+coco_2014_valminusminival',)
-}
 
 
 def vis_detections(im, class_name, dets, thresh=0.5):
@@ -85,31 +81,33 @@ def demo(sess, net, image_name, classes):
     timer.tic()
     scores, boxes = im_detect(sess, net, im)
     timer.toc()
-    print('Detection took {:.3f}s for {:d} object proposals'.format(timer.total_time, boxes.shape[0]))
+    print('Detection took {:.3f}s for {:d} object proposals'.format(
+        timer.total_time, boxes.shape[0]))
 
-    # Visualize detections for each class
-    CONF_THRESH = 0.7
-    NMS_THRESH = 0.3
-    for cls_ind, cls in enumerate(classes[1:]):
-        cls_ind += 1  # because we skipped background
-        cls_boxes = boxes[:, 4 * cls_ind:4 * (cls_ind + 1)]
-        cls_scores = scores[:, cls_ind]
-        dets = np.hstack((cls_boxes,
-                          cls_scores[:, np.newaxis])).astype(np.float32)
+    cls_ind = 1
+    cls = classes[cls_ind]
 
-        keep = nms(dets, NMS_THRESH, not cfg.USE_GPU_NMS)
+    cls_boxes = boxes[:, 4 * cls_ind:4 * (cls_ind + 1)]
+    cls_scores = scores[:, cls_ind][:, np.newaxis]
 
-        dets = dets[keep, :]
-        vis_detections(im, cls, dets, thresh=CONF_THRESH)
+    # Run TextDetector to merge small box
+    textDectctor = TextDetector()
+    textLines = textDectctor.detect(cls_boxes, cls_scores, im.shape[:2])
+
+    boxes = np.hstack((textLines[:, 0:2], textLines[:, 6:8]))
+    scores = textLines[:, -1:]
+
+    # Visualize detections
+    dets = np.hstack((boxes, scores)).astype(np.float32)
+    vis_detections(im, cls, dets, thresh=0)
 
 
 def parse_args():
     """Parse input arguments."""
-    parser = argparse.ArgumentParser(description='Tensorflow Faster R-CNN demo')
+    parser = argparse.ArgumentParser(description='Tensorflow CTPN demo')
     parser.add_argument('--net', dest='demo_net', help='Network to use [vgg16 res101 mobile]',
                         choices='mobile', default='mobile')
-    parser.add_argument('--dataset', dest='dataset', help='Trained dataset [pascal_voc pascal_voc_0712 coco]',
-                        choices=DATASETS.keys(), default='pascal_voc')
+    parser.add_argument('--tag', dest='dataset', help='model tag', default='default')
     args = parser.parse_args()
 
     return args
@@ -123,7 +121,7 @@ if __name__ == '__main__':
     demonet = args.demo_net
     dataset = args.dataset
 
-    ckpt_dir = os.path.join('output', demonet, DATASETS[dataset][0], 'default')
+    ckpt_dir = os.path.join('output', demonet, 'default')
     ckpt = tf.train.get_checkpoint_state(ckpt_dir)
 
     # set config
@@ -153,7 +151,7 @@ if __name__ == '__main__':
 
     print('Loaded network {:s}'.format(ckpt.model_checkpoint_path))
 
-    im_names = ['007.jpg', 'vin1.jpg', 'vin2.jpg', 'vin3.jpg', 'vin4.jpg', 'vin5.jpg']
+    im_names = ['007.jpg']
 
     for im_name in im_names:
         print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')

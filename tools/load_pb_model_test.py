@@ -72,28 +72,11 @@ def demo(sess, fetches, feeds, im_file, classes):
                                       anchors=anchors,
                                       num_anchors=10)
 
-    # Run R-CNN
-    RCNN_fetches = [fetches.cls_prob, fetches.bbox_pred]
-    RCNN_feed_dict = {feeds.input: im_blob,
-                      feeds.im_info: im_info, feeds.rois: rois}
-    scores, bbox_pred = sess.run(RCNN_fetches, feed_dict=RCNN_feed_dict)
-
     roi_boxes = rois[:, 1:5] / im_scales[0]
-    scores = np.reshape(scores, [scores.shape[0], -1])
-    bbox_pred = np.reshape(bbox_pred, [bbox_pred.shape[0], -1])
 
-    box_deltas = bbox_pred
-    pred_boxes = bbox_transform_inv(roi_boxes, box_deltas)
-    pred_boxes = _clip_boxes(pred_boxes, im.shape)
-    boxes = pred_boxes
-
-    print(
-        'RPN + RCNN: {:.3f}s ,{:d} object proposals'.format(timer.toc(), boxes.shape[0]))
-
-    # boxes and scores are finnally output
     textDectctor = TextDetector()
     textLines = textDectctor.detect(
-        roi_boxes, scores[:, 1][:, np.newaxis], im.shape[:2])
+        roi_boxes, roi_scores, im.shape[:2])
     boxes = np.hstack((textLines[:, 0:2], textLines[:, 6:8]))
     scores = textLines[:, -1:]
 
