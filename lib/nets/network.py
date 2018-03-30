@@ -229,23 +229,23 @@ class Network(object):
             # Mobile rois: (cfg.TRAIN.BATCH_SIZE, 5) = (256, 5), (x1,y1,x2,y2,score)
             rois = self._region_proposal(net_conv, is_training, initializer)
             # region of interest pooling
-            if cfg.POOLING_MODE == 'crop':
-                # get croped roi on conv_net
-                # Mobile pool5: (256, 7, 7, 512)
-                pool5 = self._crop_pool_layer(net_conv, rois, "pool5")
-            else:
-                raise NotImplementedError
+            # if cfg.POOLING_MODE == 'crop':
+            #     # get croped roi on conv_net
+            #     # Mobile pool5: (256, 7, 7, 512)
+            #     pool5 = self._crop_pool_layer(net_conv, rois, "pool5")
+            # else:
+            #     raise NotImplementedError
 
         # Mobile fc7: (256, 1024)
-        fc7 = self._head_to_tail(pool5, is_training)
-        with tf.variable_scope(self._scope, self._scope):
-            # region classification
-            cls_prob, bbox_pred = self._region_classification(fc7, is_training,
-                                                              initializer, initializer_bbox)
+        # fc7 = self._head_to_tail(pool5, is_training)
+        # with tf.variable_scope(self._scope, self._scope):
+        #     # region classification
+        #     cls_prob, bbox_pred = self._region_classification(fc7, is_training,
+        #                                                       initializer, initializer_bbox)
 
         self._score_summaries.update(self._predictions)
 
-        return rois, cls_prob, bbox_pred
+        return rois
 
     def _smooth_l1_loss(self, bbox_pred, bbox_targets, bbox_inside_weights, bbox_outside_weights, sigma=1.0, dim=[1]):
         sigma_2 = sigma ** 2
@@ -441,7 +441,7 @@ class Network(object):
                        weights_regularizer=weights_regularizer,
                        biases_regularizer=biases_regularizer,
                        biases_initializer=tf.constant_initializer(0.0)):
-            rois, cls_prob, bbox_pred = self._build_network(training)
+            rois = self._build_network(training)
 
         layers_to_output = {'rois': rois}
 
