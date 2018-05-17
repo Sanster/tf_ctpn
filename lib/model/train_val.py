@@ -367,7 +367,6 @@ def filter_roidb(roidb):
 def train_net(network, imdb, roidb, valroidb, output_dir, tb_dir,
               pretrained_model=None,
               max_iters=40000):
-    """Train a CTPN network."""
     roidb = filter_roidb(roidb)
     valroidb = filter_roidb(valroidb)
 

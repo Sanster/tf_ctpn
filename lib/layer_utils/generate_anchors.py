@@ -40,123 +40,124 @@ import numpy as np
 
 def generate_anchors(base_size=16, ratios=[0.5, 1, 2],
                      scales=2 ** np.arange(3, 6)):
-  """
-  Generate anchor (reference) windows by enumerating aspect ratios X
-  scales wrt a reference (0, 0, 15, 15) window.
-  """
+    """
+    Generate anchor (reference) windows by enumerating aspect ratios X
+    scales wrt a reference (0, 0, 15, 15) window.
+    """
 
-  base_anchor = np.array([1, 1, base_size, base_size]) - 1
-  ratio_anchors = _ratio_enum(base_anchor, ratios)
-  anchors = np.vstack([_scale_enum(ratio_anchors[i, :], scales)
-                       for i in range(ratio_anchors.shape[0])])
-  return anchors
+    base_anchor = np.array([1, 1, base_size, base_size]) - 1
+    ratio_anchors = _ratio_enum(base_anchor, ratios)
+    anchors = np.vstack([_scale_enum(ratio_anchors[i, :], scales)
+                         for i in range(ratio_anchors.shape[0])])
+    return anchors
 
 
-def generate_anchors_ctpn(base_size=11, anchors_size=10, anchor_width=16, h_ratio_step=0.7):
-  """
-  Generate anchor windows template by using different hight start from base_size
-  According to the ctpn paper, anchor's width is 16 pixels
-  """
-  base_anchor = np.array([1, 1, anchor_width, base_size]) - 1
-  h_ratios = h_ratio_step ** np.arange(0, anchors_size)
+def generate_anchors_ctpn(base_height=11, anchors_size=10, anchor_width=16, h_ratio_step=0.7):
+    """
+    Generate anchor windows template by using different hight start from base_size
+    According to the ctpn paper, anchor's width is always 16 pixels
 
-  w, h, x_ctr, y_ctr = _whctrs(base_anchor)
-  ws = np.array([16 for _ in range(anchors_size)])
-  hs = np.ceil(base_size / h_ratios)
-  # anchor heights in ctpn sorce code
-  # assert np.equal(hs, [11, 16, 23, 33, 48, 68, 97, 139, 198, 283]).all()
-  anchors = _mkanchors(ws, hs, x_ctr, y_ctr)
-  return anchors
+    Anchor heights in ctpn sorce code: [11, 16, 23, 33, 48, 68, 97, 139, 198, 283]
+    """
+    base_anchor = np.array([1, 1, anchor_width, base_height]) - 1
+    h_ratios = h_ratio_step ** np.arange(0, anchors_size)
+
+    w, h, x_ctr, y_ctr = _whctrs(base_anchor)
+    ws = np.array([16 for _ in range(anchors_size)])
+    hs = np.ceil(base_height / h_ratios)
+    anchors = _mkanchors(ws, hs, x_ctr, y_ctr)
+    return anchors
 
 
 def generate_anchors_pre_ctpn(height, width, feat_stride, anchor_width=16, anchor_h_ratio_step=0.7):
-  """
-  A wrapper function to generate anchors given by different height scale
-  :arg
-    height/width: height/width of last shared cnn layer feature map
-    feat_stride: total stride until the last shared cnn layer
+    """
+    A wrapper function to generate anchors given by different height scale
+    :arg
+      height/width: height/width of last shared cnn layer feature map
+      feat_stride: total stride until the last shared cnn layer
 
-  :returns
-    anchors: anchors with on input image
-    length: The total number of anchors
-  """
-  anchors = generate_anchors_ctpn(h_ratio_step=anchor_h_ratio_step, anchor_width=anchor_width)
-  A = anchors.shape[0]
-  shift_x = np.arange(0, width) * feat_stride
-  shift_y = np.arange(0, height) * feat_stride
-  shift_x, shift_y = np.meshgrid(shift_x, shift_y)
-  shifts = np.vstack((shift_x.ravel(), shift_y.ravel(), shift_x.ravel(), shift_y.ravel())).transpose()
-  K = shifts.shape[0]
-  # width changes faster, so here it is H, W, C
-  anchors = anchors.reshape((1, A, 4)) + shifts.reshape((1, K, 4)).transpose((1, 0, 2))
-  anchors = anchors.reshape((K * A, 4)).astype(np.float32, copy=False)
-  length = np.int32(anchors.shape[0])
+    :returns
+      anchors: anchors with on input image
+      length: The total number of anchors
+    """
+    anchors = generate_anchors_ctpn(h_ratio_step=anchor_h_ratio_step, anchor_width=anchor_width)
+    A = anchors.shape[0]
+    shift_x = np.arange(0, width) * feat_stride
+    shift_y = np.arange(0, height) * feat_stride
+    shift_x, shift_y = np.meshgrid(shift_x, shift_y)
+    shifts = np.vstack((shift_x.ravel(), shift_y.ravel(), shift_x.ravel(), shift_y.ravel())).transpose()
+    K = shifts.shape[0]
+    # width changes faster, so here it is H, W, C
+    anchors = anchors.reshape((1, A, 4)) + shifts.reshape((1, K, 4)).transpose((1, 0, 2))
+    anchors = anchors.reshape((K * A, 4)).astype(np.float32, copy=False)
+    length = np.int32(anchors.shape[0])
 
-  return anchors, length
+    return anchors, length
+
 
 def _whctrs(anchor):
-  """
-  Return width, height, x center, and y center for an anchor (window).
-  """
+    """
+    Return width, height, x center, and y center for an anchor (window).
+    """
 
-  w = anchor[2] - anchor[0] + 1
-  h = anchor[3] - anchor[1] + 1
-  x_ctr = anchor[0] + 0.5 * (w - 1)
-  y_ctr = anchor[1] + 0.5 * (h - 1)
-  return w, h, x_ctr, y_ctr
+    w = anchor[2] - anchor[0] + 1
+    h = anchor[3] - anchor[1] + 1
+    x_ctr = anchor[0] + 0.5 * (w - 1)
+    y_ctr = anchor[1] + 0.5 * (h - 1)
+    return w, h, x_ctr, y_ctr
 
 
 def _mkanchors(ws, hs, x_ctr, y_ctr):
-  """
-  Given a vector of widths (ws) and heights (hs) around a center
-  (x_ctr, y_ctr), output a set of anchors (windows).
-  """
+    """
+    Given a vector of widths (ws) and heights (hs) around a center
+    (x_ctr, y_ctr), output a set of anchors (windows).
+    """
 
-  ws = ws[:, np.newaxis]
-  hs = hs[:, np.newaxis]
-  anchors = np.hstack((x_ctr - 0.5 * (ws - 1),
-                       y_ctr - 0.5 * (hs - 1),
-                       x_ctr + 0.5 * (ws - 1),
-                       y_ctr + 0.5 * (hs - 1)))
-  return anchors
+    ws = ws[:, np.newaxis]
+    hs = hs[:, np.newaxis]
+    anchors = np.hstack((x_ctr - 0.5 * (ws - 1),
+                         y_ctr - 0.5 * (hs - 1),
+                         x_ctr + 0.5 * (ws - 1),
+                         y_ctr + 0.5 * (hs - 1)))
+    return anchors
 
 
 def _ratio_enum(anchor, ratios):
-  """
-  Enumerate a set of anchors for each aspect ratio wrt an anchor.
-  """
+    """
+    Enumerate a set of anchors for each aspect ratio wrt an anchor.
+    """
 
-  w, h, x_ctr, y_ctr = _whctrs(anchor)
-  size = w * h
-  size_ratios = size / ratios
-  ws = np.round(np.sqrt(size_ratios))
-  hs = np.round(ws * ratios)
-  anchors = _mkanchors(ws, hs, x_ctr, y_ctr)
-  return anchors
+    w, h, x_ctr, y_ctr = _whctrs(anchor)
+    size = w * h
+    size_ratios = size / ratios
+    ws = np.round(np.sqrt(size_ratios))
+    hs = np.round(ws * ratios)
+    anchors = _mkanchors(ws, hs, x_ctr, y_ctr)
+    return anchors
 
 
 def _scale_enum(anchor, scales):
-  """
-  Enumerate a set of anchors for each scale wrt an anchor.
-  """
+    """
+    Enumerate a set of anchors for each scale wrt an anchor.
+    """
 
-  w, h, x_ctr, y_ctr = _whctrs(anchor)
-  ws = w * scales
-  hs = h * scales
-  anchors = _mkanchors(ws, hs, x_ctr, y_ctr)
-  return anchors
+    w, h, x_ctr, y_ctr = _whctrs(anchor)
+    ws = w * scales
+    hs = h * scales
+    anchors = _mkanchors(ws, hs, x_ctr, y_ctr)
+    return anchors
 
 
 if __name__ == '__main__':
-  import time
+    import time
 
-  t = time.time()
-  a = generate_anchors()
-  print(time.time() - t)
-  print(a)
+    t = time.time()
+    a = generate_anchors()
+    print(time.time() - t)
+    print(a)
 
-  c = generate_anchors_pre_ctpn(36, 57, 16)
-  print(c)
-  from IPython import embed;
+    c = generate_anchors_pre_ctpn(36, 57, 16)
+    print(c)
+    from IPython import embed;
 
-  embed()
+    embed()
