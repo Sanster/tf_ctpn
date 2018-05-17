@@ -18,7 +18,6 @@ from layer_utils.generate_anchors import generate_anchors_pre
 from layer_utils.proposal_layer import proposal_layer
 from layer_utils.proposal_top_layer import proposal_top_layer
 from layer_utils.anchor_target_layer import anchor_target_layer
-from layer_utils.proposal_target_layer import proposal_target_layer
 from utils.visualization import draw_bounding_boxes
 
 from model.config import cfg
@@ -31,7 +30,6 @@ class Network(object):
         self._predictions = {}
         self._losses = {}
         self._anchor_targets = {}
-        self._proposal_targets = {}
         self._layers = {}
         self._gt_image = None
         self._act_summaries = []
@@ -145,31 +143,6 @@ class Network(object):
 
         return rpn_labels
 
-    def _proposal_target_layer(self, rois, roi_scores, name):
-        with tf.variable_scope(name) as scope:
-            rois, roi_scores, labels, bbox_targets, bbox_inside_weights, bbox_outside_weights = tf.py_func(
-                proposal_target_layer,
-                [rois, roi_scores, self._gt_boxes, self._num_classes],
-                [tf.float32, tf.float32, tf.float32, tf.float32, tf.float32, tf.float32],
-                name="proposal_target")
-
-            rois.set_shape([cfg.TRAIN.BATCH_SIZE, 5])
-            roi_scores.set_shape([cfg.TRAIN.BATCH_SIZE])
-            labels.set_shape([cfg.TRAIN.BATCH_SIZE, 1])
-            bbox_targets.set_shape([cfg.TRAIN.BATCH_SIZE, self._num_classes * 4])
-            bbox_inside_weights.set_shape([cfg.TRAIN.BATCH_SIZE, self._num_classes * 4])
-            bbox_outside_weights.set_shape([cfg.TRAIN.BATCH_SIZE, self._num_classes * 4])
-
-            self._proposal_targets['rois'] = rois
-            self._proposal_targets['labels'] = tf.to_int32(labels, name="to_int32")
-            self._proposal_targets['bbox_targets'] = bbox_targets
-            self._proposal_targets['bbox_inside_weights'] = bbox_inside_weights
-            self._proposal_targets['bbox_outside_weights'] = bbox_outside_weights
-
-            self._score_summaries.update(self._proposal_targets)
-
-            return rois, roi_scores
-
     def _anchor_component(self):
         with tf.variable_scope('ANCHOR_' + self._tag) as scope:
             # just to get the shape right
@@ -228,7 +201,6 @@ class Network(object):
             # RPN, class loss
             rpn_cls_score = tf.reshape(self._predictions['rpn_cls_score_reshape'], [-1, 2])  # shape (HxWxA, 2)
             rpn_label = tf.reshape(self._anchor_targets['rpn_labels'], [-1])  # shape (HxWxA)
-            # TODO: what is rpn_select??
             rpn_select = tf.where(tf.not_equal(rpn_label, -1))
             # only get positive and negative score/label
             rpn_cls_score = tf.reshape(tf.gather(rpn_cls_score, rpn_select), [-1, 2])
@@ -331,9 +303,6 @@ class Network(object):
         if is_training:
             rois, roi_scores = self._proposal_layer(rpn_cls_prob, rpn_bbox_pred, "rois")
             rpn_labels = self._anchor_target_layer(rpn_cls_score, "anchor")
-            # Try to have a deterministic order for the computing graph, for reproducibility
-            with tf.control_dependencies([rpn_labels]):
-                rois, _ = self._proposal_target_layer(rois, roi_scores, "rpn_rois")
         else:
             if cfg.TEST.MODE == 'nms':
                 rois, _ = self._proposal_layer(rpn_cls_prob, rpn_bbox_pred, "rois")
@@ -478,8 +447,3 @@ class Network(object):
                                                                  train_op],
                                                                 feed_dict=feed_dict)
         return rpn_loss_cls, rpn_loss_box, loss, summary
-
-    def train_step_no_return(self, sess, blobs, train_op):
-        feed_dict = {self._image: blobs['data'], self._im_info: blobs['im_info'],
-                     self._gt_boxes: blobs['gt_boxes']}
-        sess.run([train_op], feed_dict=feed_dict)
