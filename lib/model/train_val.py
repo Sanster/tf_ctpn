@@ -129,6 +129,7 @@ class SolverWrapper(object):
             loss = layers['total_loss']
             # Set learning rate and momentum
             lr = tf.Variable(cfg.TRAIN.LEARNING_RATE, trainable=False)
+
             self.optimizer = tf.train.MomentumOptimizer(lr, cfg.TRAIN.MOMENTUM)
 
             # Compute the gradients with regard to the loss

@@ -26,6 +26,9 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride, all_anch
       _feat_stride: the downsampling ratio of feature map to the original input image
       all_anchors:
       num_anchors:
+    :returns
+        rpn_labels: (1, 1, AxH, W)
+        rpn_bbox_targets: (1, H, W, Ax4)
     """
     A = num_anchors
     total_anchors = all_anchors.shape[0]
@@ -170,4 +173,10 @@ def _compute_targets(ex_rois, gt_rois):
     assert ex_rois.shape[1] == 4
     assert gt_rois.shape[1] == 5
 
-    return bbox_transform(ex_rois, gt_rois[:, :4]).astype(np.float32, copy=False)
+    targets = bbox_transform(ex_rois, gt_rois)
+
+    if cfg.TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED:
+        # Optionally normalize targets by a precomputed mean and stdev
+        targets = ((targets - np.array(cfg.TRAIN.BBOX_NORMALIZE_MEANS))
+                   / np.array(cfg.TRAIN.BBOX_NORMALIZE_STDS))
+    return targets

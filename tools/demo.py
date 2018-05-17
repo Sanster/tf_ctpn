@@ -84,35 +84,35 @@ def demo(sess, net, im_file, classes):
     timer = Timer()
     timer.tic()
     scores, boxes = im_detect(sess, net, im)
+    show_fine_box(im, boxes, scores)
     timer.toc()
     print('Detection took {:.3f}s for {:d} object proposals'.format(
         timer.total_time, boxes.shape[0]))
 
-    cls_ind = 1
-    cls = classes[cls_ind]
-
-    cls_boxes = boxes[:, 4 * cls_ind:4 * (cls_ind + 1)]
-    cls_scores = scores[:, cls_ind][:, np.newaxis]
-
     # Run TextDetector to merge small box
-    textDectctor = TextDetector()
-    textLines = textDectctor.detect(cls_boxes, cls_scores, im.shape[:2])
+    # line_detector = TextDetector()
+    # text_lines = line_detector.detect(boxes, scores[:, np.newaxis], im.shape[:2])
+    # print("Detect %d text lines" % len(text_lines))
+    #
+    # boxes = np.hstack((text_lines[:, 0:2], text_lines[:, 6:8]))
+    # scores = text_lines[:, -1:]
+    #
+    # # Visualize detections
+    # dets = np.hstack((boxes, scores)).astype(np.float32)
+    # vis_detections(im, 'text', dets, thresh=0)
 
-    boxes = np.hstack((textLines[:, 0:2], textLines[:, 6:8]))
-    scores = textLines[:, -1:]
 
-    # Visualize detections
-    dets = np.hstack((boxes, scores)).astype(np.float32)
-    vis_detections(im, cls, dets, thresh=0)
+def show_fine_box(im, boxes, scores):
+    dets2 = np.hstack((boxes, scores[:, np.newaxis])).astype(np.float32)
+    vis_detections(im, 'text', dets2, thresh=-1)
 
 
 def parse_args():
     """Parse input arguments."""
     parser = argparse.ArgumentParser(description='Tensorflow CTPN demo')
-    parser.add_argument('--net', dest='demo_net', help='Network to use [vgg16 res101 mobile]',
-                        choices='mobile', default='mobile')
+    parser.add_argument('--net', dest='net', choices=['vgg16'], default='vgg16')
     parser.add_argument('--img_dir', default='./data/demo')
-    parser.add_argument('--tag', dest='dataset', help='model tag', default='default')
+    parser.add_argument('--tag', dest='dataset', help='model tag', default='voc_2007_trainval')
     args = parser.parse_args()
 
     if not os.path.exists(args.img_dir):
@@ -126,10 +126,10 @@ if __name__ == '__main__':
     args = parse_args()
 
     # model path
-    demonet = args.demo_net
+    netname = args.net
     dataset = args.dataset
 
-    ckpt_dir = os.path.join('output', demonet, 'default')
+    ckpt_dir = os.path.join('output', netname, dataset, 'default')
     ckpt = tf.train.get_checkpoint_state(ckpt_dir)
 
     # set config
@@ -139,11 +139,11 @@ if __name__ == '__main__':
     # init session
     sess = tf.Session(config=tfconfig)
     # load network
-    if demonet == 'vgg16':
+    if netname == 'vgg16':
         net = vgg16()
-    elif demonet == 'res101':
+    elif netname == 'res101':
         net = resnetv1(num_layers=101)
-    elif demonet == 'mobile':
+    elif netname == 'mobile':
         net = mobilenetv1()
     else:
         raise NotImplementedError

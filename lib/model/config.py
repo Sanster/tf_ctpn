@@ -25,7 +25,7 @@ __C.TRAIN.LEARNING_RATE = 0.001
 __C.TRAIN.MOMENTUM = 0.9
 
 # Weight decay, for regularization
-__C.TRAIN.WEIGHT_DECAY = 0.0001
+__C.TRAIN.WEIGHT_DECAY = 0.0005
 
 # Factor for reducing the learning rate
 __C.TRAIN.GAMMA = 0.1
@@ -67,9 +67,6 @@ __C.TRAIN.MAX_SIZE = 1000
 
 # Images to use per minibatch
 __C.TRAIN.IMS_PER_BATCH = 1
-
-# Minibatch size (number of regions of interest [ROIs])
-__C.TRAIN.BATCH_SIZE = 128
 
 # Fraction of minibatch that is labeled foreground (i.e. class > 0)
 __C.TRAIN.FG_FRACTION = 0.25

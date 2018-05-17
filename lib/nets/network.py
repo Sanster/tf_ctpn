@@ -162,10 +162,8 @@ class Network(object):
         # select initializers
         if cfg.TRAIN.TRUNCATED:
             initializer = tf.truncated_normal_initializer(mean=0.0, stddev=0.01)
-            initializer_bbox = tf.truncated_normal_initializer(mean=0.0, stddev=0.001)
         else:
             initializer = tf.random_normal_initializer(mean=0.0, stddev=0.01)
-            initializer_bbox = tf.random_normal_initializer(mean=0.0, stddev=0.001)
 
         net_conv = self._image_to_head(is_training)
         with tf.variable_scope(self._scope, self._scope):
@@ -201,6 +199,7 @@ class Network(object):
             # RPN, class loss
             rpn_cls_score = tf.reshape(self._predictions['rpn_cls_score_reshape'], [-1, 2])  # shape (HxWxA, 2)
             rpn_label = tf.reshape(self._anchor_targets['rpn_labels'], [-1])  # shape (HxWxA)
+            # except don't care label
             rpn_select = tf.where(tf.not_equal(rpn_label, -1))
             # only get positive and negative score/label
             rpn_cls_score = tf.reshape(tf.gather(rpn_cls_score, rpn_select), [-1, 2])
@@ -302,7 +301,7 @@ class Network(object):
 
         if is_training:
             rois, roi_scores = self._proposal_layer(rpn_cls_prob, rpn_bbox_pred, "rois")
-            rpn_labels = self._anchor_target_layer(rpn_cls_score, "anchor")
+            self._anchor_target_layer(rpn_cls_score, "anchor")
         else:
             if cfg.TEST.MODE == 'nms':
                 rois, _ = self._proposal_layer(rpn_cls_prob, rpn_bbox_pred, "rois")
@@ -368,10 +367,10 @@ class Network(object):
             self._train_summaries.append(var)
 
         if testing:
-            stds = np.tile(np.array(cfg.TRAIN.BBOX_NORMALIZE_STDS), self._num_classes)
-            means = np.tile(np.array(cfg.TRAIN.BBOX_NORMALIZE_MEANS), self._num_classes)
-            self._predictions["bbox_pred"] *= stds
-            self._predictions["bbox_pred"] += means
+            stds = np.tile(np.array(cfg.TRAIN.BBOX_NORMALIZE_STDS), self._num_anchors)
+            means = np.tile(np.array(cfg.TRAIN.BBOX_NORMALIZE_MEANS), self._num_anchors)
+            self._predictions["rpn_bbox_pred"] *= stds
+            self._predictions["rpn_bbox_pred"] += means
         else:
             self._build_losses()
             layers_to_output.update(self._losses)
@@ -413,9 +412,12 @@ class Network(object):
         feed_dict = {self._image: image,
                      self._im_info: im_info}
 
-        cls_score, cls_prob, bbox_pred, rois = sess.run([self._predictions["cls_score"],
-                                                         self._predictions['cls_prob'],
-                                                         self._predictions['bbox_pred'],
+        # bbox_pred 是 VGG16 conv5 feature map 上所有 anchor 的 bbox_pred 结果
+        # cls_prob 是 VGG16 conv5 feature map 上所有 anchor 的分类的结果
+        # rois 是 rpn 的输出结果
+        cls_score, cls_prob, bbox_pred, rois = sess.run([self._predictions["rpn_cls_score"],
+                                                         self._predictions['rpn_cls_prob'],
+                                                         self._predictions['rpn_bbox_pred'],
                                                          self._predictions['rois']],
                                                         feed_dict=feed_dict)
         return cls_score, cls_prob, bbox_pred, rois
