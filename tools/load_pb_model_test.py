@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from easydict import EasyDict as edict
 
 from demo import vis_detections
-from layer_utils.generate_anchors import generate_anchors_pre_ctpn
+from layer_utils.generate_anchors import generate_anchors_pre
 from layer_utils.proposal_layer import proposal_layer
 from model.bbox_transform import bbox_transform_inv
 from model.config import cfg
@@ -61,10 +61,10 @@ def demo(sess, fetches, feeds, im_file, classes):
     width = rpn_cls_prob.shape[2]
     stride = [16, ]
 
-    anchors, anchor_lenght = generate_anchors_pre_ctpn(height, width,
-                                                       stride,
-                                                       anchor_width=16,
-                                                       anchor_h_ratio_step=0.7)
+    anchors, anchor_lenght = generate_anchors_pre(height, width,
+                                                  stride,
+                                                  anchor_width=16,
+                                                  anchor_h_ratio_step=0.7)
 
     rois, roi_scores = proposal_layer(rpn_cls_prob, rpn_bbox_pred, im_info,
                                       cfg_key="TEST",

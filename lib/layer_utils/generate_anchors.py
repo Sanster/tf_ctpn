@@ -38,21 +38,7 @@ import numpy as np
 #       [ -79., -167.,   96.,  184.],
 #       [-167., -343.,  184.,  360.]])
 
-def generate_anchors(base_size=16, ratios=[0.5, 1, 2],
-                     scales=2 ** np.arange(3, 6)):
-    """
-    Generate anchor (reference) windows by enumerating aspect ratios X
-    scales wrt a reference (0, 0, 15, 15) window.
-    """
-
-    base_anchor = np.array([1, 1, base_size, base_size]) - 1
-    ratio_anchors = _ratio_enum(base_anchor, ratios)
-    anchors = np.vstack([_scale_enum(ratio_anchors[i, :], scales)
-                         for i in range(ratio_anchors.shape[0])])
-    return anchors
-
-
-def generate_anchors_ctpn(base_height=11, anchors_size=10, anchor_width=16, h_ratio_step=0.7):
+def generate_anchors(base_height=11, anchors_size=10, anchor_width=16, h_ratio_step=0.7):
     """
     Generate anchor windows template by using different hight start from base_size
     According to the ctpn paper, anchor's width is always 16 pixels
@@ -69,7 +55,7 @@ def generate_anchors_ctpn(base_height=11, anchors_size=10, anchor_width=16, h_ra
     return anchors
 
 
-def generate_anchors_pre_ctpn(height, width, feat_stride, anchor_width=16, anchor_h_ratio_step=0.7):
+def generate_anchors_pre(height, width, feat_stride, anchor_width=16, anchor_h_ratio_step=0.7):
     """
     A wrapper function to generate anchors given by different height scale
     :arg
@@ -77,10 +63,10 @@ def generate_anchors_pre_ctpn(height, width, feat_stride, anchor_width=16, ancho
       feat_stride: total stride until the last shared cnn layer
 
     :returns
-      anchors: anchors with on input image
+      anchors: anchors on input image
       length: The total number of anchors
     """
-    anchors = generate_anchors_ctpn(h_ratio_step=anchor_h_ratio_step, anchor_width=anchor_width)
+    anchors = generate_anchors(h_ratio_step=anchor_h_ratio_step, anchor_width=anchor_width)
     A = anchors.shape[0]
     shift_x = np.arange(0, width) * feat_stride
     shift_y = np.arange(0, height) * feat_stride
@@ -156,7 +142,7 @@ if __name__ == '__main__':
     print(time.time() - t)
     print(a)
 
-    c = generate_anchors_pre_ctpn(36, 57, 16)
+    c = generate_anchors_pre(36, 57, 16)
     print(c)
     from IPython import embed;
 

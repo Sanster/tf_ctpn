@@ -117,9 +117,6 @@ __C.TRAIN.PROPOSAL_METHOD = 'gt'
 # tall and thin or both short and wide) in order to avoid wasting computation
 # on zero-padding.
 
-# Use RPN to detect objects
-__C.TRAIN.HAS_RPN = True
-
 # IOU >= thresh: positive example
 __C.TRAIN.RPN_POSITIVE_OVERLAP = 0.7
 
@@ -172,15 +169,8 @@ __C.TEST.MAX_SIZE = 1000
 # IoU >= this threshold)
 __C.TEST.NMS = 0.3
 
-# Experimental: treat the (K+1) units in the cls_score layer as linear
-# predictors (trained, eg, with one-vs-rest SVMs).
-__C.TEST.SVM = False
-
 # Test using bounding-box regressors
 __C.TEST.BBOX_REG = True
-
-# Propose boxes
-__C.TEST.HAS_RPN = False
 
 # Test using these proposals
 __C.TEST.PROPOSAL_METHOD = 'gt'
@@ -209,12 +199,6 @@ __C.TEST.RPN_TOP_N = 5000
 #
 
 __C.RESNET = edict()
-
-# Option to set if max-pooling is appended after crop_and_resize. 
-# if true, the region will be resized to a square of 2xPOOLING_SIZE, 
-# then 2x2 max-pooling is applied; otherwise the region will be directly
-# resized to a square of POOLING_SIZE
-__C.RESNET.MAX_POOL = False
 
 # Number of fixed blocks during training, by default the first of all 4 blocks is fixed
 # Range: 0 (none) to 3 (all)
@@ -264,12 +248,6 @@ __C.EXP_DIR = 'default'
 
 # Use GPU implementation of non-maximum suppression
 __C.USE_GPU_NMS = False
-
-# Default pooling mode, only 'crop' is available
-__C.POOLING_MODE = 'crop'
-
-# Size of the pooled region after RoI pooling
-__C.POOLING_SIZE = 7
 
 # Anchor scales for RPN
 __C.ANCHOR_SCALES = [8, 16, 32]

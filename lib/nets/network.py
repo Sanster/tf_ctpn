@@ -14,7 +14,7 @@ from tensorflow.contrib.slim import arg_scope
 
 import numpy as np
 
-from layer_utils.generate_anchors import generate_anchors_pre_ctpn
+from layer_utils.generate_anchors import generate_anchors_pre
 from layer_utils.proposal_layer import proposal_layer
 from layer_utils.proposal_top_layer import proposal_top_layer
 from layer_utils.anchor_target_layer import anchor_target_layer
@@ -175,7 +175,7 @@ class Network(object):
             # just to get the shape right
             height = tf.to_int32(tf.ceil(self._im_info[0] / np.float32(self._feat_stride[0])))
             width = tf.to_int32(tf.ceil(self._im_info[1] / np.float32(self._feat_stride[0])))
-            anchors, anchor_length = tf.py_func(generate_anchors_pre_ctpn,
+            anchors, anchor_length = tf.py_func(generate_anchors_pre,
                                                 [height, width,
                                                  self._feat_stride,
                                                  cfg.CTPN.ANCHOR_WIDTH, cfg.CTPN.H_RADIO_STEP],

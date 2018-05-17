@@ -106,8 +106,8 @@ if __name__ == '__main__':
 
     # load model
     net.create_architecture("TEST", imdb.num_classes, tag='default',
-                            anchor_scales=cfg.ANCHOR_SCALES,
-                            anchor_ratios=cfg.ANCHOR_RATIOS)
+                            anchor_width=cfg.CTPN.ANCHOR_WIDTH,
+                            anchor_h_ratio_step=cfg.CTPN.H_RADIO_STEP)
 
     if args.model:
         print(('Loading model check point from {:s}').format(args.model))
