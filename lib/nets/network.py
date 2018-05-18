@@ -189,6 +189,13 @@ class Network(object):
 
         return loss_box
 
+    def smooth_l1_dist(self, deltas, sigma2=9.0, name='smooth_l1_dist'):
+        with tf.name_scope(name=name):
+            deltas_abs = tf.abs(deltas)
+            smoothL1_sign = tf.cast(tf.less(deltas_abs, 1.0 / sigma2), tf.float32)
+            return tf.square(deltas) * 0.5 * sigma2 * smoothL1_sign + \
+                   (deltas_abs - 0.5 / sigma2) * tf.abs(smoothL1_sign - 1)
+
     def _build_losses(self, sigma_rpn=3.0):
         with tf.variable_scope('LOSS_' + self._tag) as scope:
             # RPN, class loss
@@ -217,8 +224,14 @@ class Network(object):
             rpn_bbox_inside_weights = tf.gather(tf.reshape(rpn_bbox_inside_weights, [-1, 4]), rpn_select)
             rpn_bbox_outside_weights = tf.gather(tf.reshape(rpn_bbox_outside_weights, [-1, 4]), rpn_select)
 
-            rpn_loss_box = self._smooth_l1_loss(rpn_bbox_pred, rpn_bbox_targets, rpn_bbox_inside_weights,
-                                                rpn_bbox_outside_weights, sigma=sigma_rpn, dim=[1])
+            # rpn_loss_box = self._smooth_l1_loss(rpn_bbox_pred, rpn_bbox_targets, rpn_bbox_inside_weights,
+            #                                     rpn_bbox_outside_weights, sigma=sigma_rpn, dim=[1])
+
+            smooth_l1_dist = self.smooth_l1_dist(rpn_bbox_inside_weights * (rpn_bbox_pred - rpn_bbox_targets))
+            rpn_loss_box_n = tf.reduce_sum(rpn_bbox_outside_weights * smooth_l1_dist, axis=[1])
+
+            fg_keep = tf.cast(tf.equal(rpn_label, 1), tf.float32)
+            rpn_loss_box = tf.reduce_sum(rpn_loss_box_n) / (tf.reduce_sum(fg_keep) + 1)
 
             rpn_loss = rpn_cross_entropy + rpn_loss_box
             regularization_loss = tf.add_n(tf.losses.get_regularization_losses(), name='regu_loss')
@@ -249,20 +262,11 @@ class Network(object):
 
             outputs = slim.fully_connected(lstm_out, d_o,
                                            weights_initializer=initializer,
+                                           weights_regularizer=tf.contrib.layers.l2_regularizer(cfg.TRAIN.WEIGHT_DECAY),
                                            trainable=is_training,
                                            activation_fn=None)
 
-            # init_weights = tf.truncated_normal_initializer(stddev=0.1)
-            # init_biases = tf.constant_initializer(0.0)
-            # weights = self._make_var('weights', [2 * hidden_num, d_o], init_weights, is_training, \
-            #                         regularizer=self.l2_regularizer(cfg.TRAIN.WEIGHT_DECAY))
-            # biases = self._make_var('biases', [d_o], init_biases, is_training)
-            # outputs = tf.matmul(lstm_out, weights) + biases
-
             return outputs
-
-    def _make_var(self, name, shape, initializer=None, trainable=True, regularizer=None):
-        return tf.get_variable(name, shape, initializer=initializer, trainable=trainable, regularizer=regularizer)
 
     def _region_proposal(self, net_conv, is_training, initializer):
         rpn = slim.conv2d(net_conv, cfg.RPN_CHANNELS, [3, 3], trainable=is_training, weights_initializer=initializer,
