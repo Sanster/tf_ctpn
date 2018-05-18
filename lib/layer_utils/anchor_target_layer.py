@@ -24,10 +24,10 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride, all_anch
       gt_boxes: (G, 5) vstack of [x1, y1, x2, y2, class]
       im_info: [image_height, image_width]
       _feat_stride: the downsampling ratio of feature map to the original input image
-      all_anchors:
+      all_anchors: all anchors pre generated
       num_anchors:
     :returns
-        rpn_labels: (1, 1, AxH, W)
+        rpn_labels: (1, H, W, A)
         rpn_bbox_targets: (1, H, W, Ax4)
     """
     A = num_anchors
@@ -37,7 +37,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride, all_anch
     # allow boxes to sit over the edge by a small amount
     _allowed_border = 0
 
-    # map of shape (..., H, W)
+    # map of shape (..., H, W), height/width for feature map
     height, width = rpn_cls_score.shape[1:3]
 
     # only keep anchors inside the image
@@ -129,26 +129,21 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride, all_anch
     bbox_outside_weights = _unmap(bbox_outside_weights, total_anchors, inds_inside, fill=0)
 
     # labels
-    labels = labels.reshape((1, height, width, A)).transpose(0, 3, 1, 2)
-    labels = labels.reshape((1, 1, A * height, width))
+    labels = labels.reshape((1, height, width, A))
     rpn_labels = labels
 
     # bbox_targets
-    bbox_targets = bbox_targets \
-        .reshape((1, height, width, A * 4))
-
+    bbox_targets = bbox_targets.reshape((1, height, width, A * 4))
     rpn_bbox_targets = bbox_targets
-    # bbox_inside_weights
-    bbox_inside_weights = bbox_inside_weights \
-        .reshape((1, height, width, A * 4))
 
+    # bbox_inside_weights
+    bbox_inside_weights = bbox_inside_weights.reshape((1, height, width, A * 4))
     rpn_bbox_inside_weights = bbox_inside_weights
 
     # bbox_outside_weights
-    bbox_outside_weights = bbox_outside_weights \
-        .reshape((1, height, width, A * 4))
-
+    bbox_outside_weights = bbox_outside_weights.reshape((1, height, width, A * 4))
     rpn_bbox_outside_weights = bbox_outside_weights
+
     return rpn_labels, rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights
 
 

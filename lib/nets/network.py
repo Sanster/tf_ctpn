@@ -66,17 +66,12 @@ class Network(object):
     def _add_train_summary(self, var):
         tf.summary.histogram('TRAIN/' + var.op.name, var)
 
-    def _reshape_layer(self, bottom, num_dim, name):
-        input_shape = tf.shape(bottom)
-        with tf.variable_scope(name) as scope:
-            # change the channel to the caffe format
-            to_caffe = tf.transpose(bottom, [0, 3, 1, 2])
-            # then force it to have channel 2
-            reshaped = tf.reshape(to_caffe,
-                                  tf.concat(axis=0, values=[[1, num_dim, -1], [input_shape[2]]]))
-            # then swap the channel back
-            to_tf = tf.transpose(reshaped, [0, 2, 3, 1])
-            return to_tf
+    def _reshape_layer(self, input, num_dim, name):
+        """
+        (1, H, W, Axd) -> (1, H, WxA, d)
+        """
+        input_shape = tf.shape(input)
+        return tf.reshape(input, [input_shape[0], input_shape[1], -1, num_dim], name=name)
 
     def _softmax_layer(self, bottom, name):
         if name.startswith('rpn_cls_prob_reshape'):
@@ -128,7 +123,7 @@ class Network(object):
                 [tf.float32, tf.float32, tf.float32, tf.float32],
                 name="anchor_target")
 
-            rpn_labels.set_shape([1, 1, None, None])
+            rpn_labels.set_shape([1, None, None, self._num_anchors])
             rpn_bbox_targets.set_shape([1, None, None, self._num_anchors * 4])
             rpn_bbox_inside_weights.set_shape([1, None, None, self._num_anchors * 4])
             rpn_bbox_outside_weights.set_shape([1, None, None, self._num_anchors * 4])
@@ -197,13 +192,17 @@ class Network(object):
     def _build_losses(self, sigma_rpn=3.0):
         with tf.variable_scope('LOSS_' + self._tag) as scope:
             # RPN, class loss
-            rpn_cls_score = tf.reshape(self._predictions['rpn_cls_score_reshape'], [-1, 2])  # shape (HxWxA, 2)
-            rpn_label = tf.reshape(self._anchor_targets['rpn_labels'], [-1])  # shape (HxWxA)
+            # (N, H, W x num_anchors, 2) -> (N x H x W x num_anchors, 2)
+            rpn_cls_score = tf.reshape(self._predictions['rpn_cls_score_reshape'], [-1, 2])
+            # (N, H, W, num_anchors) -> (N x H x W x num_anchors)
+            rpn_label = tf.reshape(self._anchor_targets['rpn_labels'], [-1])
+
             # except don't care label
             rpn_select = tf.where(tf.not_equal(rpn_label, -1))
             # only get positive and negative score/label
             rpn_cls_score = tf.reshape(tf.gather(rpn_cls_score, rpn_select), [-1, 2])
             rpn_label = tf.reshape(tf.gather(rpn_label, rpn_select), [-1])
+
             rpn_cross_entropy = tf.reduce_mean(
                 tf.nn.sparse_softmax_cross_entropy_with_logits(logits=rpn_cls_score, labels=rpn_label))
 
@@ -284,14 +283,14 @@ class Network(object):
                                     weights_initializer=initializer,
                                     padding='VALID', activation_fn=None, scope='rpn_cls_score')
 
-        # change it so that the score has 2 as its channel size
+        # (N, H, W, num_anchors * 2) -> (N, H, W * num_anchors, 2)
         rpn_cls_score_reshape = self._reshape_layer(rpn_cls_score, 2, 'rpn_cls_score_reshape')
         rpn_cls_prob_reshape = self._softmax_layer(rpn_cls_score_reshape, "rpn_cls_prob_reshape")
 
         # get positive text score
         rpn_cls_pred = tf.argmax(tf.reshape(rpn_cls_score_reshape, [-1, 2]), axis=1, name="rpn_cls_pred")
 
-        # get correct shape for softmax result (N, H, W, num_anchors*2)
+        # (N, H, W*num_anchors, 2) -> (N, H, W, num_anchors*2)
         rpn_cls_prob = self._reshape_layer(rpn_cls_prob_reshape, self._num_anchors * 2, "rpn_cls_prob")
 
         # use 1x1 conv as FC

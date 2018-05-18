@@ -30,7 +30,12 @@ def proposal_layer(rpn_cls_prob, rpn_bbox_pred, im_info, cfg_key, _feat_stride, 
     # Get the scores and bounding boxes for foreground (text)
     # The order in last dim is related to network.py:
     # self._reshape_layer(rpn_cls_prob_reshape, self._num_anchors * 2, "rpn_cls_prob")
-    scores = rpn_cls_prob[:, :, :, num_anchors:]
+    # scores = rpn_cls_prob[:, :, :, num_anchors:] # old
+
+    height, width = rpn_cls_prob.shape[1:3]  # feature-map的高宽
+    scores = np.reshape(np.reshape(rpn_cls_prob, [1, height, width, num_anchors, 2])[:, :, :, :, 1],
+                        [1, height, width, num_anchors])
+
     rpn_bbox_pred = rpn_bbox_pred.reshape((-1, 4))
     scores = scores.reshape((-1, 1))
     proposals = bbox_transform_inv(anchors, rpn_bbox_pred)

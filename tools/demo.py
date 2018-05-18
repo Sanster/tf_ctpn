@@ -84,22 +84,22 @@ def demo(sess, net, im_file, classes):
     timer = Timer()
     timer.tic()
     scores, boxes = im_detect(sess, net, im)
-    show_fine_box(im, boxes, scores)
+    # show_fine_box(im, boxes, scores)
     timer.toc()
     print('Detection took {:.3f}s for {:d} object proposals'.format(
         timer.total_time, boxes.shape[0]))
 
     # Run TextDetector to merge small box
-    # line_detector = TextDetector()
-    # text_lines = line_detector.detect(boxes, scores[:, np.newaxis], im.shape[:2])
-    # print("Detect %d text lines" % len(text_lines))
-    #
-    # boxes = np.hstack((text_lines[:, 0:2], text_lines[:, 6:8]))
-    # scores = text_lines[:, -1:]
-    #
-    # # Visualize detections
-    # dets = np.hstack((boxes, scores)).astype(np.float32)
-    # vis_detections(im, 'text', dets, thresh=0)
+    line_detector = TextDetector()
+    text_lines = line_detector.detect(boxes, scores[:, np.newaxis], im.shape[:2])
+    print("Detect %d text lines" % len(text_lines))
+
+    boxes = np.hstack((text_lines[:, 0:2], text_lines[:, 6:8]))
+    scores = text_lines[:, -1:]
+
+    # Visualize detections
+    dets = np.hstack((boxes, scores)).astype(np.float32)
+    vis_detections(im, 'text', dets, thresh=0)
 
 
 def show_fine_box(im, boxes, scores):
