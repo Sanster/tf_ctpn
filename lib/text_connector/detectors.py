@@ -32,7 +32,6 @@ class TextDetector:
         # 获取检测结果
         text_recs = self.text_proposal_connector.get_text_lines(text_proposals, scores, size)
         keep_inds = self.filter_boxes(text_recs)
-        return text_recs
         return text_recs[keep_inds]
 
     def filter_boxes(self, boxes):

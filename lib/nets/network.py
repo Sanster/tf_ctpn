@@ -411,15 +411,9 @@ class Network(object):
         feed_dict = {self._image: image,
                      self._im_info: im_info}
 
-        # bbox_pred 是 VGG16 conv5 feature map 上所有 anchor 的 bbox_pred 结果
-        # cls_prob 是 VGG16 conv5 feature map 上所有 anchor 的分类的结果
         # rois 是 rpn 的输出结果
-        cls_score, cls_prob, bbox_pred, rois = sess.run([self._predictions["rpn_cls_score"],
-                                                         self._predictions['rpn_cls_prob'],
-                                                         self._predictions['rpn_bbox_pred'],
-                                                         self._predictions['rois']],
-                                                        feed_dict=feed_dict)
-        return cls_score, cls_prob, bbox_pred, rois
+        rois = sess.run(self._predictions['rois'], feed_dict=feed_dict)
+        return rois
 
     def get_summary(self, sess, blobs):
         feed_dict = {self._image: blobs['data'], self._im_info: blobs['im_info'],

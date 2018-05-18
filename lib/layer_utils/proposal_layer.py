@@ -58,7 +58,5 @@ def proposal_layer(rpn_cls_prob, rpn_bbox_pred, im_info, cfg_key, _feat_stride, 
     scores = scores[keep]
 
     # Only support single image as input
-    batch_inds = np.zeros((proposals.shape[0], 1), dtype=np.float32)
-    blob = np.hstack((batch_inds, proposals.astype(np.float32, copy=False)))
-
+    blob = np.hstack((scores.astype(np.float32, copy=False), proposals.astype(np.float32, copy=False)))
     return blob, scores
