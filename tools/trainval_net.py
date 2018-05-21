@@ -99,7 +99,9 @@ if __name__ == '__main__':
     np.random.seed(cfg.RNG_SEED)
 
     # train set
-    imdb, roidb = combined_roidb(args.imdb_name)
+    # imdb, roidb = combined_roidb(args.imdb_name)
+    imdb = get_imdb(args.imdb_name)
+    roidb = get_training_roidb(imdb)
     print('{:d} roidb entries'.format(len(roidb)))
 
     # output directory where the models are saved
