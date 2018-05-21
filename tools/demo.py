@@ -112,7 +112,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Tensorflow CTPN demo')
     parser.add_argument('--net', dest='net', choices=['vgg16'], default='vgg16')
     parser.add_argument('--img_dir', default='./data/demo')
-    parser.add_argument('--tag', dest='dataset', help='model tag', default='voc_2007_trainval')
+    parser.add_argument('--dataset', dest='dataset', help='model tag', default='voc_2007_trainval')
+    parser.add_argument('--tag', dest='tag', help='model tag', default='default')
     args = parser.parse_args()
 
     if not os.path.exists(args.img_dir):
@@ -129,7 +130,7 @@ if __name__ == '__main__':
     netname = args.net
     dataset = args.dataset
 
-    ckpt_dir = os.path.join('output', netname, dataset, 'default')
+    ckpt_dir = os.path.join('output', netname, dataset, args.tag)
     ckpt = tf.train.get_checkpoint_state(ckpt_dir)
 
     # set config
