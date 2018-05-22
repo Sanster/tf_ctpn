@@ -230,7 +230,8 @@ __C.MOBILENET.DEPTH_MULTIPLIER = 1.
 
 # Pixel mean values (BGR order) as a (1, 1, 3) array
 # Means for VGG, from https://github.com/tensorflow/models/blob/master/research/slim/preprocessing/vgg_preprocessing.py
-__C.PIXEL_MEANS = np.array([[[103.94, 116.78, 123.68]]])
+__C.PIXEL_MEANS = np.array([[[102.9801, 115.9465, 122.7717]]])
+# __C.PIXEL_MEANS = np.array([[[103.94, 116.78, 123.68]]])
 
 # For reproducibility
 __C.RNG_SEED = 3
