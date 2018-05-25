@@ -126,15 +126,21 @@ class SolverWrapper(object):
                                                   anchor_h_ratio_step=cfg.CTPN.H_RADIO_STEP,
                                                   num_anchors=cfg.CTPN.NUM_ANCHORS)
             # Define the loss
-            loss = layers['total_loss']
+            total_loss = layers['total_loss']
             # Set learning rate and momentum
             lr = tf.Variable(cfg.TRAIN.LEARNING_RATE, trainable=False)
 
-            self.optimizer = tf.train.MomentumOptimizer(lr, cfg.TRAIN.MOMENTUM)
+            # self.optimizer = tf.train.MomentumOptimizer(lr, cfg.TRAIN.MOMENTUM)
+            self.optimizer = tf.train.AdamOptimizer(lr)
 
             global_step = tf.Variable(0, trainable=False)
-            # Compute the gradients with regard to the loss
-            train_op = self.optimizer.minimize(loss, global_step=global_step)
+            with_clip = True
+            if with_clip:
+                tvars = tf.trainable_variables()
+                grads, norm = tf.clip_by_global_norm(tf.gradients(total_loss, tvars), 10.0)
+                train_op = self.optimizer.apply_gradients(list(zip(grads, tvars)), global_step=global_step)
+            else:
+                train_op = self.optimizer.minimize(total_loss, global_step=global_step)
 
             # We will handle the snapshots ourselves
             self.saver = tf.train.Saver(max_to_keep=100000)
@@ -286,12 +292,9 @@ class SolverWrapper(object):
                     self.net.train_step(sess, blobs, train_op)
             timer.toc()
 
-            # Display training information
-            if iter % cfg.TRAIN.DISPLAY == 0:
-                print('iter: %d / %d, total loss: %.6f\n >>> rpn_loss: %.6f\n >>> rpn_loss_cls: %.6f\n '
-                      '>>> rpn_loss_box: %.6f\n >>> lr: %f' % \
-                      (iter, max_iters, total_loss, rpn_loss, rpn_loss_cls, rpn_loss_box, lr.eval()))
-                print('speed: {:.3f}s / iter'.format(timer.average_time))
+            print('%d/%d time: %.3f total_loss: %.3f rpn_loss: %.3f rpn_loss_cls: %.3f '
+                  'rpn_loss_box: %.3f lr: %f' % (
+                      iter, max_iters, timer.diff, total_loss, rpn_loss, rpn_loss_cls, rpn_loss_box, lr.eval()))
 
             # Snapshotting
             if iter % cfg.TRAIN.SNAPSHOT_ITERS == 0:

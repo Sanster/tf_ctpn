@@ -56,7 +56,7 @@ __C.TRAIN.ASPECT_GROUPING = False
 __C.TRAIN.SNAPSHOT_KEPT = 3
 
 # The time interval for saving tensorflow summaries
-__C.TRAIN.SUMMARY_INTERVAL = 180
+__C.TRAIN.SUMMARY_INTERVAL = 30
 
 # Scale to use during training (can list multiple scales)
 # The scale is the pixel size of an image's shortest side
@@ -69,7 +69,7 @@ __C.TRAIN.MAX_SIZE = 1000
 __C.TRAIN.IMS_PER_BATCH = 1
 
 # Fraction of minibatch that is labeled foreground (i.e. class > 0)
-__C.TRAIN.FG_FRACTION = 0.25
+__C.TRAIN.FG_FRACTION = 0.3
 
 # Overlap threshold for a ROI to be considered foreground (if >= FG_THRESH)
 __C.TRAIN.FG_THRESH = 0.5
@@ -99,7 +99,7 @@ __C.TRAIN.SNAPSHOT_PREFIX = 'res101_faster_rcnn'
 __C.TRAIN.BBOX_NORMALIZE_TARGETS = True
 
 # Deprecated (inside weights) useless in CTPN
-__C.TRAIN.BBOX_INSIDE_WEIGHTS = (1.0, 1.0, 1.0, 1.0)
+__C.TRAIN.BBOX_INSIDE_WEIGHTS = (0.0, 1.0, 0.0, 1.0)
 
 # Normalize the targets using "precomputed" (or made up) means and stdevs
 # (BBOX_NORMALIZE_TARGETS must also be True)
@@ -143,7 +143,7 @@ __C.TRAIN.RPN_POST_NMS_TOP_N = 2000
 # Deprecated (outside weights)
 # The order of weights see lib/model/bbox_transform.py  bbox_transform()
 # Weights for (x, y, w, h), for CTPN it should be (0.,1.,0.,1.)
-__C.TRAIN.RPN_BBOX_INSIDE_WEIGHTS = (0.0, 1.0, 0.0, 1.0)
+__C.TRAIN.RPN_BBOX_INSIDE_WEIGHTS = (1.0, 1.0, 1.0, 1.0)
 
 # Give the positive RPN examples weight of p * 1 / {num positives}
 # and give negatives a weight of (1 - p)
@@ -180,10 +180,10 @@ __C.TEST.PROPOSAL_METHOD = 'gt'
 __C.TEST.RPN_NMS_THRESH = 0.7
 
 # Number of top scoring boxes to keep before apply NMS to RPN proposals
-__C.TEST.RPN_PRE_NMS_TOP_N = 6000
+__C.TEST.RPN_PRE_NMS_TOP_N = 12000
 
 # Number of top scoring boxes to keep after applying NMS to RPN proposals
-__C.TEST.RPN_POST_NMS_TOP_N = 300
+__C.TEST.RPN_POST_NMS_TOP_N = 1000
 
 # Proposal height and width both need to be greater than RPN_MIN_SIZE (at orig image scale)
 # __C.TEST.RPN_MIN_SIZE = 16

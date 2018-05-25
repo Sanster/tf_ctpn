@@ -45,12 +45,14 @@ def generate_anchors(base_height=11, anchors_size=10, anchor_width=16, h_ratio_s
 
     Anchor heights in ctpn sorce code: [11, 16, 23, 33, 48, 68, 97, 139, 198, 283]
     """
-    base_anchor = np.array([1, 1, anchor_width, base_height]) - 1
+    base_anchor = np.array([1, 1, anchor_width, anchor_width]) - 1
     h_ratios = h_ratio_step ** np.arange(0, anchors_size)
 
     w, h, x_ctr, y_ctr = _whctrs(base_anchor)
     ws = np.array([16 for _ in range(anchors_size)])
-    hs = np.ceil(base_height / h_ratios)
+
+    # hs = np.ceil(base_height / h_ratios)
+    hs = np.asarray([11, 16, 23, 33, 48, 68, 97, 139, 198, 283])
     anchors = _mkanchors(ws, hs, x_ctr, y_ctr)
     return anchors
 
@@ -66,6 +68,7 @@ def generate_anchors_pre(height, width, feat_stride, anchor_width=16, anchor_h_r
       anchors: anchors on input image
       length: The total number of anchors
     """
+    # print("width: %d, height: %d" %(width,height))
     anchors = generate_anchors(h_ratio_step=anchor_h_ratio_step, anchor_width=anchor_width)
     A = anchors.shape[0]
     shift_x = np.arange(0, width) * feat_stride
@@ -101,10 +104,10 @@ def _mkanchors(ws, hs, x_ctr, y_ctr):
 
     ws = ws[:, np.newaxis]
     hs = hs[:, np.newaxis]
-    anchors = np.hstack((x_ctr - 0.5 * (ws - 1),
-                         y_ctr - 0.5 * (hs - 1),
-                         x_ctr + 0.5 * (ws - 1),
-                         y_ctr + 0.5 * (hs - 1)))
+    anchors = np.hstack((x_ctr - ws/2,
+                         y_ctr - hs/2,
+                         x_ctr + ws/2,
+                         y_ctr + hs/2)).astype(np.int32)
     return anchors
 
 
@@ -142,7 +145,7 @@ if __name__ == '__main__':
     print(time.time() - t)
     print(a)
 
-    c = generate_anchors_pre(36, 57, 16)
+    c = generate_anchors_pre(47, 37, 16)
     print(c)
     from IPython import embed;
 

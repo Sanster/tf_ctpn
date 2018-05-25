@@ -74,6 +74,29 @@ def vis_detections(im, class_name, dets, thresh=0.5, text=False):
     plt.show()
 
 
+def draw_rpn_boxes(img, img_name, boxes, scores, nms, save_dir):
+    """
+    :param boxes: [(x1, y1, x2, y2)]
+    """
+    base_name = img_name.split('/')[-1]
+    color = (0, 255, 0)
+    out = img.copy()
+
+    if nms:
+        boxes, scores = TextDetector.pre_process(boxes, scores)
+        file_name = "%s_rpn_nms.jpg" % base_name
+    else:
+        file_name = "%s_rpn.jpg" % base_name
+
+    for i, box in enumerate(boxes):
+        cv2.rectangle(out, (box[0], box[1]), (box[2], box[3]), color, 2)
+        cx = int((box[0] + box[2]) / 2)
+        cy = int((box[1] + box[3]) / 2)
+        cv2.putText(out, "%.01f" % scores[i], (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.2, (255, 0, 0))
+
+    cv2.imwrite(os.path.join(save_dir, file_name), out)
+
+
 def demo(sess, net, im_file, classes):
     """Detect object classes in an image using pre-computed object proposals."""
 
@@ -88,6 +111,8 @@ def demo(sess, net, im_file, classes):
     timer.toc()
     print('Detection took {:.3f}s for {:d} object proposals'.format(
         timer.total_time, boxes.shape[0]))
+
+    draw_rpn_boxes(im, "test", boxes, scores[:, np.newaxis], False, './')
 
     # Run TextDetector to merge small box
     line_detector = TextDetector()

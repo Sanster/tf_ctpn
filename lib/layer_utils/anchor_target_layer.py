@@ -40,6 +40,8 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride, all_anch
     # map of shape (..., H, W), height/width for feature map
     height, width = rpn_cls_score.shape[1:3]
 
+    # print("rpn: gt_boxes.shape %d" % gt_boxes.shape)
+    # print("rpn: gt_boxes", gt_boxes)
     # only keep anchors inside the image
     inds_inside = np.where(
         (all_anchors[:, 0] >= -_allowed_border) &
@@ -47,6 +49,8 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride, all_anch
         (all_anchors[:, 2] < im_info[1] + _allowed_border) &  # width
         (all_anchors[:, 3] < im_info[0] + _allowed_border)  # height
     )[0]
+    # print("total_anchors %d" % total_anchors)
+    # print("inds_inside %d" % len(inds_inside))
 
     # keep only inside anchors
     anchors = all_anchors[inds_inside, :]
@@ -85,6 +89,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride, all_anch
     # subsample positive labels if we have too many
     num_fg = int(cfg.TRAIN.RPN_FG_FRACTION * cfg.TRAIN.RPN_BATCHSIZE)
     fg_inds = np.where(labels == 1)[0]
+    # print("fg_inds.shape", fg_inds.shape)
     if len(fg_inds) > num_fg:
         disable_inds = npr.choice(
             fg_inds, size=(len(fg_inds) - num_fg), replace=False)
@@ -93,6 +98,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride, all_anch
     # subsample negative labels if we have too many
     num_bg = cfg.TRAIN.RPN_BATCHSIZE - np.sum(labels == 1)
     bg_inds = np.where(labels == 0)[0]
+    # print("bg_inds.shape", bg_inds.shape)
     if len(bg_inds) > num_bg:
         disable_inds = npr.choice(
             bg_inds, size=(len(bg_inds) - num_bg), replace=False)
@@ -101,6 +107,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride, all_anch
     bbox_targets = np.zeros((len(inds_inside), 4), dtype=np.float32)
     # get rpn_bbox_targets in delta format, the predict result of rpn is (tx, ty, tw, th)
     bbox_targets = _compute_targets(anchors, gt_boxes[argmax_overlaps, :])
+    # print("bbox_targets!===================", bbox_targets)
 
     bbox_inside_weights = np.zeros((len(inds_inside), 4), dtype=np.float32)
     # only the positive ones have regression targets
@@ -110,8 +117,11 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride, all_anch
     if cfg.TRAIN.RPN_POSITIVE_WEIGHT < 0:
         # uniform weighting of examples (given non-uniform sampling)
         num_examples = np.sum(labels >= 0)
-        positive_weights = np.ones((1, 4)) * 1.0 / num_examples
-        negative_weights = np.ones((1, 4)) * 1.0 / num_examples
+        # positive_weights = np.ones((1, 4)) * 1.0 / num_examples
+        # negative_weights = np.ones((1, 4)) * 1.0 / num_examples
+        # CTPN:
+        positive_weights = np.ones((1, 4))
+        negative_weights = np.zeros((1, 4))
     else:
         assert ((cfg.TRAIN.RPN_POSITIVE_WEIGHT > 0) &
                 (cfg.TRAIN.RPN_POSITIVE_WEIGHT < 1))

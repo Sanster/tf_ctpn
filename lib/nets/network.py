@@ -169,11 +169,9 @@ class Network(object):
             # build the anchors for the image
             self._anchor_component()
             # region proposal network
-            rois = self._region_proposal(net_conv, is_training, initializer)
+            self._region_proposal(net_conv, is_training, initializer)
 
         self._score_summaries.update(self._predictions)
-
-        return rois
 
     def _smooth_l1_loss(self, bbox_pred, bbox_targets, bbox_inside_weights, bbox_outside_weights, sigma=1.0, dim=[1]):
         sigma_2 = sigma ** 2
@@ -185,7 +183,6 @@ class Network(object):
                       + (abs_in_box_diff - (0.5 / sigma_2)) * (1. - smoothL1_sign)
         out_loss_box = bbox_outside_weights * in_loss_box
 
-        # TODO: check whether it is ok to directly use reduce_mean
         loss_box = tf.reduce_mean(tf.reduce_sum(
             out_loss_box,
             axis=dim
@@ -211,11 +208,12 @@ class Network(object):
             # except don't care label
             rpn_select = tf.where(tf.not_equal(rpn_label, -1))
             # only get positive and negative score/label
-            rpn_cls_score = tf.reshape(tf.gather(rpn_cls_score, rpn_select), [-1, 2])
-            rpn_label = tf.reshape(tf.gather(rpn_label, rpn_select), [-1])
+
+            rpn_cls_score = tf.gather(rpn_cls_score, rpn_select)
+            rpn_label = tf.gather(rpn_label, rpn_select)
 
             rpn_cross_entropy = tf.reduce_mean(
-                tf.nn.sparse_softmax_cross_entropy_with_logits(logits=rpn_cls_score, labels=rpn_label))
+                tf.nn.sparse_softmax_cross_entropy_with_logits(labels=rpn_label, logits=rpn_cls_score))
 
             # RPN, bbox loss
             rpn_bbox_pred = self._predictions['rpn_bbox_pred']  # shape (1, H, W, Ax4)
@@ -238,8 +236,9 @@ class Network(object):
             rpn_loss_box = tf.reduce_sum(rpn_loss_box_n) / (tf.reduce_sum(tf.cast(fg_keep, tf.float32)) + 1)
 
             rpn_loss = rpn_cross_entropy + rpn_loss_box
-            regularization_loss = tf.add_n(tf.losses.get_regularization_losses(), name='regu_loss')
-            total_loss = rpn_loss + regularization_loss
+
+            regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+            total_loss = tf.add_n(regularization_losses) + rpn_loss
 
             self._losses['rpn_cross_entropy'] = rpn_cross_entropy
             self._losses['rpn_loss_box'] = rpn_loss_box
@@ -370,7 +369,6 @@ class Network(object):
         rpn_cls_prob_reshape = self._reshape_layer(rpn_cls_prob, self._num_anchors * 2, name='rpn_cls_prob_reshape')
 
         if is_training:
-            rois, roi_scores = self._proposal_layer(rpn_cls_prob_reshape, rpn_bbox_pred, "rois")
             self._anchor_target_layer(rpn_cls_score, "anchor")
         else:
             if cfg.TEST.MODE == 'nms':
@@ -379,15 +377,13 @@ class Network(object):
                 rois, _ = self._proposal_top_layer(rpn_cls_prob, rpn_bbox_pred, "rois")
             else:
                 raise NotImplementedError
+            self._predictions["rois"] = rois
 
         self._predictions["rpn_cls_score"] = rpn_cls_score
         self._predictions["rpn_cls_score_reshape"] = rpn_cls_score_reshape
         self._predictions["rpn_cls_prob"] = rpn_cls_prob_reshape
         # self._predictions["rpn_cls_pred"] = rpn_cls_pred
         self._predictions["rpn_bbox_pred"] = rpn_bbox_pred
-        self._predictions["rois"] = rois
-
-        return rois
 
     @abstractmethod
     def _image_to_head(self, is_training, reuse=None):
@@ -429,18 +425,17 @@ class Network(object):
                        weights_regularizer=weights_regularizer,
                        biases_regularizer=biases_regularizer,
                        biases_initializer=tf.constant_initializer(0.0)):
-            rois = self._build_network(training)
-
-        layers_to_output = {'rois': rois}
+            self._build_network(training)
 
         for var in tf.trainable_variables():
             self._train_summaries.append(var)
 
+        layers_to_output = {}
         if testing:
             stds = np.tile(np.array(cfg.TRAIN.BBOX_NORMALIZE_STDS), self._num_anchors)
             means = np.tile(np.array(cfg.TRAIN.BBOX_NORMALIZE_MEANS), self._num_anchors)
-            self._predictions["rpn_bbox_pred"] *= stds
-            self._predictions["rpn_bbox_pred"] += means
+            # self._predictions["rpn_bbox_pred"] *= stds
+            # self._predictions["rpn_bbox_pred"] += means
         else:
             self._build_losses()
             layers_to_output.update(self._losses)
@@ -496,12 +491,15 @@ class Network(object):
     def train_step(self, sess, blobs, train_op):
         feed_dict = {self._image: blobs['data'], self._im_info: blobs['im_info'],
                      self._gt_boxes: blobs['gt_boxes']}
-        rpn_loss_cls, rpn_loss_box, rpn_loss, total_loss, _ = sess.run([self._losses["rpn_cross_entropy"],
-                                                                        self._losses['rpn_loss_box'],
-                                                                        self._losses['rpn_loss'],
-                                                                        self._losses['total_loss'],
-                                                                        train_op],
-                                                                       feed_dict=feed_dict)
+        rpn_loss_cls, rpn_loss_box, rpn_loss, total_loss, rpn_bbox_targets, _ = sess.run(
+            [self._losses["rpn_cross_entropy"],
+             self._losses['rpn_loss_box'],
+             self._losses['rpn_loss'],
+             self._losses['total_loss'],
+             self._anchor_targets['rpn_bbox_targets'],
+             train_op],
+            feed_dict=feed_dict)
+
         return rpn_loss_cls, rpn_loss_box, rpn_loss, total_loss, _
 
     def train_step_with_summary(self, sess, blobs, train_op):

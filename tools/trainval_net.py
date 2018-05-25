@@ -113,8 +113,11 @@ if __name__ == '__main__':
     print('TensorFlow summaries will be saved to `{:s}`'.format(tb_dir))
 
     # also add the validation set, but with no flipping images
+    orgflip = cfg.TRAIN.USE_FLIPPED
+    cfg.TRAIN.USE_FLIPPED = False
     _, valroidb = combined_roidb(args.imdbval_name)
     print('{:d} validation roidb entries'.format(len(valroidb)))
+    cfg.TRAIN.USE_FLIPPED = orgflip
 
     # load network
     if args.net == 'vgg16':
