@@ -71,7 +71,7 @@ class vgg16(Network):
             with tf.device("/cpu:0"):
                 # fix RGB to BGR
                 # We only need to reverse the first layer of conv, conv2 is the sum of conv1
-                conv1_rgb = tf.get_variable("conv1_rgb", [3, 3, 3, 64], trainable=False)
+                conv1_rgb = tf.get_variable("conv1_rgb", [3, 3, 3, 64], trainable=True)
                 restorer_fc = tf.train.Saver({self._scope + "/conv1/conv1_1/weights": conv1_rgb})
                 restorer_fc.restore(sess, pretrained_model)
                 sess.run(tf.assign(self._variables_to_fix[self._scope + '/conv1/conv1_1/weights:0'],

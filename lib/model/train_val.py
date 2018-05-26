@@ -109,6 +109,8 @@ class SolverWrapper(object):
         try:
             reader = pywrap_tensorflow.NewCheckpointReader(file_name)
             var_to_shape_map = reader.get_variable_to_shape_map()
+            print("var_to_shape_map")
+            print(var_to_shape_map)
             return var_to_shape_map
         except Exception as e:  # pylint: disable=broad-except
             print(str(e))

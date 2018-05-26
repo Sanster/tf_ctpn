@@ -112,7 +112,9 @@ def demo(sess, net, im_file, classes):
     print('Detection took {:.3f}s for {:d} object proposals'.format(
         timer.total_time, boxes.shape[0]))
 
-    draw_rpn_boxes(im, "test", boxes, scores[:, np.newaxis], False, './')
+    img_name = im_file.split('/')[-1]
+    draw_rpn_boxes(im, img_name, boxes, scores[:, np.newaxis], True, './')
+    draw_rpn_boxes(im, img_name, boxes, scores[:, np.newaxis], False, './')
 
     # Run TextDetector to merge small box
     line_detector = TextDetector()
@@ -124,7 +126,7 @@ def demo(sess, net, im_file, classes):
 
     # Visualize detections
     dets = np.hstack((boxes, scores)).astype(np.float32)
-    vis_detections(im, 'text', dets, thresh=0)
+    #vis_detections(im, 'text', dets, thresh=0)
 
 
 def show_fine_box(im, boxes, scores):

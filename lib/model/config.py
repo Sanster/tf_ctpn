@@ -143,7 +143,7 @@ __C.TRAIN.RPN_POST_NMS_TOP_N = 2000
 # Deprecated (outside weights)
 # The order of weights see lib/model/bbox_transform.py  bbox_transform()
 # Weights for (x, y, w, h), for CTPN it should be (0.,1.,0.,1.)
-__C.TRAIN.RPN_BBOX_INSIDE_WEIGHTS = (1.0, 1.0, 1.0, 1.0)
+__C.TRAIN.RPN_BBOX_INSIDE_WEIGHTS = (0.0, 1.0, 0.0, 1.0)
 
 # Give the positive RPN examples weight of p * 1 / {num positives}
 # and give negatives a weight of (1 - p)
