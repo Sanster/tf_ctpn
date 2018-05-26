@@ -109,8 +109,6 @@ class SolverWrapper(object):
         try:
             reader = pywrap_tensorflow.NewCheckpointReader(file_name)
             var_to_shape_map = reader.get_variable_to_shape_map()
-            print("var_to_shape_map")
-            print(var_to_shape_map)
             return var_to_shape_map
         except Exception as e:  # pylint: disable=broad-except
             print(str(e))
@@ -189,12 +187,9 @@ class SolverWrapper(object):
 
         restorer = tf.train.Saver(variables_to_restore)
         restorer.restore(sess, self.pretrained_model)
-        print('Loaded.')
-        # Need to fix the variables before loading, so that the RGB weights are changed to BGR
-        # For VGG16 it also changes the convolutional weights fc6 and fc7 to
-        # fully connected weights
+        # Reverse RGB weights of conv1 to BGR(slim pre-trained model are use RGB input, opencv use BGR)
         self.net.fix_variables(sess, self.pretrained_model)
-        print('Fixed.')
+        print('Loaded.')
         last_snapshot_iter = 0
         rate = cfg.TRAIN.LEARNING_RATE
         stepsizes = list(cfg.TRAIN.STEPSIZE)

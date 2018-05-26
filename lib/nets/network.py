@@ -265,9 +265,6 @@ class Network(object):
 
             lstm_out = tf.reshape(lstm_out, [N * H * W, 2 * hidden_num])
 
-            print("lstm_out shape")
-            print(lstm_out.shape)
-
             # outputs = slim.fully_connected(lstm_out, d_o,
             #                                weights_initializer=initializer,
             #                                weights_regularizer=tf.contrib.layers.l2_regularizer(cfg.TRAIN.WEIGHT_DECAY),
@@ -282,9 +279,6 @@ class Network(object):
             outputs = tf.matmul(lstm_out, weights) + biases
 
             outputs = tf.reshape(outputs, [N, H, W, d_o])
-
-            print("bilstm outputs")
-            print(outputs.shape)
 
             return outputs
 

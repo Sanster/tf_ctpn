@@ -97,7 +97,7 @@ def draw_rpn_boxes(img, img_name, boxes, scores, nms, save_dir):
     cv2.imwrite(os.path.join(save_dir, file_name), out)
 
 
-def demo(sess, net, im_file, classes):
+def demo(sess, net, im_file):
     """Detect object classes in an image using pre-computed object proposals."""
 
     # Load the demo image
@@ -126,7 +126,7 @@ def demo(sess, net, im_file, classes):
 
     # Visualize detections
     dets = np.hstack((boxes, scores)).astype(np.float32)
-    #vis_detections(im, 'text', dets, thresh=0)
+    vis_detections(im, 'text', dets, thresh=0)
 
 
 def show_fine_box(im, boxes, scores):
@@ -191,4 +191,4 @@ if __name__ == '__main__':
     for im_file in im_files:
         print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
         print('Demo for {}'.format(im_file))
-        demo(sess, net, im_file, CLASSES)
+        demo(sess, net, im_file)

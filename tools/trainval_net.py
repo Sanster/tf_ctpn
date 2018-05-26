@@ -30,8 +30,9 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Train a CTPN network')
     parser.add_argument('--cfg', dest='cfg_file',
                         help='optional config file',
-                        default='./experiments/cfgs/vgg16.yml', type=str)
+                        default='./data/cfgs/vgg16.yml', type=str)
     parser.add_argument('--pretrained_model',
+                        default='./data/pretrained_model/vgg_16.ckpt',
                         help='path to pretrained model, initialize with pretrained model weights',
                         type=str)
     parser.add_argument('--imdb', dest='imdb_name',

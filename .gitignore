@@ -5,3 +5,6 @@ tensorboard
 lib/build
 .idea
 data/demo/*
+data/VOCdevkit2007
+data/cache
+data/pretrained_model/*.ckpt

@@ -66,13 +66,13 @@ class vgg16(Network):
         return variables_to_restore
 
     def fix_variables(self, sess, pretrained_model):
-        print('Fix VGG16 layers..')
+        print('Reverse VGG16 conv1_1 weights..')
         with tf.variable_scope('Fix_VGG16') as scope:
             with tf.device("/cpu:0"):
                 # fix RGB to BGR
                 # We only need to reverse the first layer of conv, conv2 is the sum of conv1
                 conv1_rgb = tf.get_variable("conv1_rgb", [3, 3, 3, 64], trainable=True)
-                restorer_fc = tf.train.Saver({self._scope + "/conv1/conv1_1/weights": conv1_rgb})
-                restorer_fc.restore(sess, pretrained_model)
+                restorer_conv1 = tf.train.Saver({self._scope + "/conv1/conv1_1/weights": conv1_rgb})
+                restorer_conv1.restore(sess, pretrained_model)
                 sess.run(tf.assign(self._variables_to_fix[self._scope + '/conv1/conv1_1/weights:0'],
                                    tf.reverse(conv1_rgb, [2])))
