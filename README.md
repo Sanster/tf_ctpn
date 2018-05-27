@@ -7,6 +7,11 @@ This is a practice project to learn how CTPN works. Most of codes in this projec
 - CTPN source: https://github.com/tianzhi0549/CTPN
 
 # Setup
+Install dependencies:
+```
+pip3 install -r requirements.txt
+```
+
 Build Cython part for both demo and training.
 ```
 cd lib/

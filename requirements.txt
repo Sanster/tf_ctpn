@@ -1,2 +1,5 @@
+Cython
+numpy
+opencv-python
 tensorflow-gpu
 easydict

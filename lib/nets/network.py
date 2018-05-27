@@ -414,12 +414,11 @@ class Network(object):
     def train_step(self, sess, blobs, train_op):
         feed_dict = {self._image: blobs['data'], self._im_info: blobs['im_info'],
                      self._gt_boxes: blobs['gt_boxes']}
-        rpn_loss_cls, rpn_loss_box, rpn_loss, total_loss, rpn_bbox_targets, _ = sess.run(
+        rpn_loss_cls, rpn_loss_box, rpn_loss, total_loss, _ = sess.run(
             [self._losses["rpn_cross_entropy"],
              self._losses['rpn_loss_box'],
              self._losses['rpn_loss'],
              self._losses['total_loss'],
-             self._anchor_targets['rpn_bbox_targets'],
              train_op],
             feed_dict=feed_dict)
 
