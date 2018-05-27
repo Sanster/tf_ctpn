@@ -74,13 +74,6 @@ class Network(object):
         return tf.reshape(input, [input_shape[0], input_shape[1], -1, num_dim], name=name)
 
     def _softmax_layer(self, input, name):
-        # if name.startswith('rpn_cls_prob_reshape'):
-        #     input_shape = tf.shape(bottom)
-        #     bottom_reshaped = tf.reshape(bottom, [-1, input_shape[-1]])
-        #     reshaped_score = tf.nn.softmax(bottom_reshaped, name=name)
-        #     return tf.reshape(reshaped_score, input_shape)
-        # return tf.nn.softmax(bottom, name=name)
-
         input_shape = tf.shape(input)
         return tf.reshape(tf.nn.softmax(tf.reshape(input, [-1, input_shape[3]])),
                           [-1, input_shape[1], input_shape[2], input_shape[3]], name=name)
@@ -173,23 +166,6 @@ class Network(object):
 
         self._score_summaries.update(self._predictions)
 
-    def _smooth_l1_loss(self, bbox_pred, bbox_targets, bbox_inside_weights, bbox_outside_weights, sigma=1.0, dim=[1]):
-        sigma_2 = sigma ** 2
-        box_diff = bbox_pred - bbox_targets
-        in_box_diff = bbox_inside_weights * box_diff
-        abs_in_box_diff = tf.abs(in_box_diff)
-        smoothL1_sign = tf.stop_gradient(tf.to_float(tf.less(abs_in_box_diff, 1. / sigma_2)))
-        in_loss_box = tf.pow(in_box_diff, 2) * (sigma_2 / 2.) * smoothL1_sign \
-                      + (abs_in_box_diff - (0.5 / sigma_2)) * (1. - smoothL1_sign)
-        out_loss_box = bbox_outside_weights * in_loss_box
-
-        loss_box = tf.reduce_mean(tf.reduce_sum(
-            out_loss_box,
-            axis=dim
-        ))
-
-        return loss_box
-
     def smooth_l1_dist(self, deltas, sigma2=9.0, name='smooth_l1_dist'):
         with tf.name_scope(name=name):
             deltas_abs = tf.abs(deltas)
@@ -265,18 +241,11 @@ class Network(object):
 
             lstm_out = tf.reshape(lstm_out, [N * H * W, 2 * hidden_num])
 
-            # outputs = slim.fully_connected(lstm_out, d_o,
-            #                                weights_initializer=initializer,
-            #                                weights_regularizer=tf.contrib.layers.l2_regularizer(cfg.TRAIN.WEIGHT_DECAY),
-            #                                trainable=is_training,
-            #                                activation_fn=None)
-
-            init_weights = tf.truncated_normal_initializer(stddev=0.1)
-            init_biases = tf.constant_initializer(0.0)
-            weights = self._make_var('weights', [2 * hidden_num, d_o], init_weights, is_training,
-                                     regularizer=self._l2_regularizer(cfg.TRAIN.WEIGHT_DECAY))
-            biases = self._make_var('biases', [d_o], init_biases, is_training)
-            outputs = tf.matmul(lstm_out, weights) + biases
+            outputs = slim.fully_connected(lstm_out, d_o,
+                                           weights_initializer=initializer,
+                                           weights_regularizer=tf.contrib.layers.l2_regularizer(cfg.TRAIN.WEIGHT_DECAY),
+                                           trainable=is_training,
+                                           activation_fn=None)
 
             outputs = tf.reshape(outputs, [N, H, W, d_o])
 
@@ -292,24 +261,6 @@ class Network(object):
 
         return regularizer
 
-    def _make_var(self, name, shape, initializer=None, trainable=True, regularizer=None):
-        return tf.get_variable(name, shape, initializer=initializer, trainable=trainable, regularizer=regularizer)
-
-    def _lstm_fc(self, input, d_i, d_o, name, trainable=True):
-        with tf.variable_scope(name) as scope:
-            shape = tf.shape(input)
-            N, H, W, C = shape[0], shape[1], shape[2], shape[3]
-            input = tf.reshape(input, [N * H * W, C])
-
-            init_weights = tf.truncated_normal_initializer(0.0, stddev=0.01)
-            init_biases = tf.constant_initializer(0.0)
-            kernel = self._make_var('weights', [d_i, d_o], init_weights, trainable,
-                                    regularizer=self._l2_regularizer(cfg.TRAIN.WEIGHT_DECAY))
-            biases = self._make_var('biases', [d_o], init_biases, trainable)
-
-            _O = tf.matmul(input, kernel) + biases
-            return tf.reshape(_O, [N, H, W, int(d_o)])
-
     def _region_proposal(self, net_conv, is_training, initializer):
         rpn = slim.conv2d(net_conv, cfg.RPN_CHANNELS, [3, 3], trainable=is_training, weights_initializer=initializer,
                           scope="rpn_conv/3x3")
@@ -319,48 +270,27 @@ class Network(object):
         bi_lstm = self._BiLstm(rpn, cfg.RPN_CHANNELS, lstm_output, hidden_num=128, name="bi_lstm",
                                initializer=initializer, is_training=is_training)
 
-        # === start use CONV as Fully connect ===
-        # # reshape to [N, H, W, C] for 1x1 conv operate
-        # shape = tf.shape(rpn)
-        # N, H, W, _ = shape[0], shape[1], shape[2], shape[3]
-        # bi_lstm_reshape = tf.reshape(bi_lstm, [N, H, W, lstm_output])
-        #
-        # # use 1x1 conv as FC (N, H, W, num_anchors * 2)
-        # rpn_cls_score = slim.conv2d(bi_lstm_reshape, self._num_anchors * 2, [1, 1], trainable=is_training,
-        #                             weights_initializer=initializer,
-        #                             padding='VALID', activation_fn=None, scope='rpn_cls_score')
-        #
-        # # (N, H, W, num_anchors * 2) -> (N, H, W * num_anchors, 2)
-        # rpn_cls_score_reshape = self._reshape_layer(rpn_cls_score, 2, 'rpn_cls_score_reshape')
-        # rpn_cls_prob_reshape = self._softmax_layer(rpn_cls_score_reshape, "rpn_cls_prob_reshape")
-        #
-        # # get positive text score
-        # rpn_cls_pred = tf.argmax(tf.reshape(rpn_cls_score_reshape, [-1, 2]), axis=1, name="rpn_cls_pred")
-        #
-        # # (N, H, W*num_anchors, 2) -> (N, H, W, num_anchors*2)
-        # rpn_cls_prob = self._reshape_layer(rpn_cls_prob_reshape, self._num_anchors * 2, "rpn_cls_prob")
-        #
-        # rpn_bbox_pred = slim.conv2d(bi_lstm_reshape, self._num_anchors * 4, [1, 1], trainable=is_training,
-        #                             weights_initializer=initializer,
-        #                             padding='VALID', activation_fn=None, scope='rpn_bbox_pred')
-        # === end use CONV as Fully connect ===
+        # reshape to [N, H, W, C] for 1x1 conv operate
+        shape = tf.shape(rpn)
+        N, H, W, _ = shape[0], shape[1], shape[2], shape[3]
+        bi_lstm_reshape = tf.reshape(bi_lstm, [N, H, W, lstm_output])
 
-        # (self.feed('lstm_o').lstm_fc(512,len(anchor_scales) * 10 * 4, name='rpn_bbox_pred'))
-        # (self.feed('lstm_o').lstm_fc(512,len(anchor_scales) * 10 * 2,name='rpn_cls_score'))
+        # use 1x1 conv as FC (N, H, W, num_anchors * 2)
+        rpn_cls_score = slim.conv2d(bi_lstm_reshape, self._num_anchors * 2, [1, 1], trainable=is_training,
+                                    weights_initializer=initializer,
+                                    padding='VALID', activation_fn=None, scope='rpn_cls_score')
 
-        rpn_bbox_pred = self._lstm_fc(bi_lstm, 512, self._num_anchors * 4, name='rpn_bbox_pred')
+        # use 1x1 conv as FC (N, H, W, num_anchors * 4)
+        rpn_bbox_pred = slim.conv2d(bi_lstm_reshape, self._num_anchors * 4, [1, 1], trainable=is_training,
+                                    weights_initializer=initializer,
+                                    padding='VALID', activation_fn=None, scope='rpn_bbox_pred')
 
-        # (N, H, W, Ax2)
-        rpn_cls_score = self._lstm_fc(bi_lstm, 512, self._num_anchors * 2, name='rpn_cls_score')
+        # (N, H, W, num_anchors * 2) -> (N, H, W * num_anchors, 2)
+        rpn_cls_score_reshape = self._reshape_layer(rpn_cls_score, 2, 'rpn_cls_score_reshape')
+        rpn_cls_prob = self._softmax_layer(rpn_cls_score_reshape, "rpn_cls_prob")
 
-        # (N, H, WxA, 2)
-        rpn_cls_score_reshape = self._reshape_layer(rpn_cls_score, 2, name='rpn_cls_score_reshape')
-
-        # (N, H, WxA, 2)
-        rpn_cls_prob = self._softmax_layer(rpn_cls_score_reshape, name='rpn_cls_prob')
-
-        # (N, H, W, Ax2)
-        rpn_cls_prob_reshape = self._reshape_layer(rpn_cls_prob, self._num_anchors * 2, name='rpn_cls_prob_reshape')
+        # (N, H, W*num_anchors, 2) -> (N, H, W, num_anchors*2)
+        rpn_cls_prob_reshape = self._reshape_layer(rpn_cls_prob, self._num_anchors * 2, "rpn_cls_prob_reshape")
 
         if is_training:
             self._anchor_target_layer(rpn_cls_score, "anchor")
@@ -376,7 +306,6 @@ class Network(object):
         self._predictions["rpn_cls_score"] = rpn_cls_score
         self._predictions["rpn_cls_score_reshape"] = rpn_cls_score_reshape
         self._predictions["rpn_cls_prob"] = rpn_cls_prob_reshape
-        # self._predictions["rpn_cls_pred"] = rpn_cls_pred
         self._predictions["rpn_bbox_pred"] = rpn_bbox_pred
 
     @abstractmethod
