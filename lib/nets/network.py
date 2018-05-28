@@ -9,7 +9,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
-from tensorflow.contrib.slim import losses
+import time
 from tensorflow.contrib.slim import arg_scope
 
 import numpy as np
@@ -385,7 +385,7 @@ class Network(object):
     def get_variables_to_restore(self, variables, var_keep_dic):
         raise NotImplementedError
 
-    def fix_variables(self, sess, pretrained_model):
+    def reverse_RGB_weights(self, sess, pretrained_model):
         raise NotImplementedError
 
     # Extract the head feature maps, for example for vgg16 it is conv5_3

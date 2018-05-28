@@ -32,17 +32,7 @@ class TextDetector:
         return text_proposals, scores
 
     def detect(self, text_proposals, scores, size):
-        # 删除得分较低的proposal
-        keep_inds = np.where(scores > TextLineCfg.TEXT_PROPOSALS_MIN_SCORE)[0]
-        text_proposals, scores = text_proposals[keep_inds], scores[keep_inds]
-
-        # 按得分排序
-        sorted_indices = np.argsort(scores.ravel())[::-1]
-        text_proposals, scores = text_proposals[sorted_indices], scores[sorted_indices]
-
-        # 对proposal做nms
-        keep_inds = nms(np.hstack((text_proposals, scores)), TextLineCfg.TEXT_PROPOSALS_NMS_THRESH)
-        text_proposals, scores = text_proposals[keep_inds], scores[keep_inds]
+        text_proposals, scores = self.pre_process(text_proposals, scores)
 
         # 获取检测结果
         text_recs = self.text_proposal_connector.get_text_lines(text_proposals, scores, size)

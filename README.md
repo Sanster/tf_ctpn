@@ -43,6 +43,10 @@ python3 tools/trainval_net.py
 ```
 The output checkpoint file will be saved at `./output/vgg16/voc_2007_trainval/default`
 
+1. Start tensorboard
+```
+tensorboard --logdir=./tensorboard
+```
 
 # Todo
 - [ ] Support ResNet

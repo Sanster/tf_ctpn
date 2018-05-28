@@ -21,6 +21,9 @@ __C.TRAIN = edict()
 # Initial learning rate
 __C.TRAIN.LEARNING_RATE = 0.001
 
+# Optimizer Adam, Momentum, RMS
+__C.TRAIN.OPTIMIZER = 'Adam'
+
 # Momentum
 __C.TRAIN.MOMENTUM = 0.9
 
@@ -140,7 +143,6 @@ __C.TRAIN.RPN_PRE_NMS_TOP_N = 12000
 # Number of top scoring boxes to keep after applying NMS to RPN proposals
 __C.TRAIN.RPN_POST_NMS_TOP_N = 2000
 
-# Deprecated (outside weights)
 # The order of weights see lib/model/bbox_transform.py  bbox_transform()
 # Weights for (x, y, w, h), for CTPN it should be (0.,1.,0.,1.)
 __C.TRAIN.RPN_BBOX_INSIDE_WEIGHTS = (0.0, 1.0, 0.0, 1.0)

@@ -265,7 +265,7 @@ class mobilenetv1(Network):
 
     return variables_to_restore
 
-  def fix_variables(self, sess, pretrained_model):
+  def reverse_RGB_weights(self, sess, pretrained_model):
     print('Fix MobileNet V1 layers..')
     with tf.variable_scope('Fix_MobileNet_V1') as scope:
       with tf.device("/cpu:0"):

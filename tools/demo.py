@@ -16,6 +16,7 @@ from __future__ import division
 from __future__ import print_function
 
 import glob
+import time
 
 import _init_paths
 from model.config import cfg
@@ -38,7 +39,7 @@ from nets.mobilenet_v1 import mobilenetv1
 CLASSES = ('__background__', 'text')
 
 
-def vis_detections(im, class_name, dets, thresh=0.5, text=False):
+def vis_detections(im, im_name, class_name, dets, result_dir, thresh=0.5, text=False):
     """Draw detected bounding boxes."""
     inds = np.where(dets[:, -1] >= thresh)[0]
     if len(inds) == 0:
@@ -71,6 +72,7 @@ def vis_detections(im, class_name, dets, thresh=0.5, text=False):
     plt.axis('off')
     plt.tight_layout()
     plt.draw()
+    plt.savefig(os.path.join(result_dir, im_name))
     plt.show()
 
 
@@ -97,7 +99,7 @@ def draw_rpn_boxes(img, img_name, boxes, scores, nms, save_dir):
     cv2.imwrite(os.path.join(save_dir, file_name), out)
 
 
-def demo(sess, net, im_file):
+def demo(sess, net, im_file, result_dir):
     """Detect object classes in an image using pre-computed object proposals."""
 
     # Load the demo image
@@ -107,14 +109,13 @@ def demo(sess, net, im_file):
     timer = Timer()
     timer.tic()
     scores, boxes = im_detect(sess, net, im)
-    # show_fine_box(im, boxes, scores)
     timer.toc()
     print('Detection took {:.3f}s for {:d} object proposals'.format(
-        timer.total_time, boxes.shape[0]))
+        timer.diff, boxes.shape[0]))
 
     img_name = im_file.split('/')[-1]
-    draw_rpn_boxes(im, img_name, boxes, scores[:, np.newaxis], True, './')
-    draw_rpn_boxes(im, img_name, boxes, scores[:, np.newaxis], False, './')
+    draw_rpn_boxes(im, img_name, boxes, scores[:, np.newaxis], True, result_dir)
+    draw_rpn_boxes(im, img_name, boxes, scores[:, np.newaxis], False, result_dir)
 
     # Run TextDetector to merge small box
     line_detector = TextDetector()
@@ -126,12 +127,7 @@ def demo(sess, net, im_file):
 
     # Visualize detections
     dets = np.hstack((boxes, scores)).astype(np.float32)
-    vis_detections(im, 'text', dets, thresh=0)
-
-
-def show_fine_box(im, boxes, scores):
-    dets2 = np.hstack((boxes, scores[:, np.newaxis])).astype(np.float32)
-    vis_detections(im, 'text', dets2, thresh=-1)
+    vis_detections(im, img_name, CLASSES[1], dets, result_dir, thresh=0)
 
 
 def parse_args():
@@ -146,6 +142,10 @@ def parse_args():
     if not os.path.exists(args.img_dir):
         print("img dir not exists.")
         exit(-1)
+
+    args.result_dir = os.path.join('./data/result', args.tag)
+    if not os.path.exists(args.result_dir):
+        os.makedirs(args.result_dir)
 
     return args
 
@@ -191,4 +191,4 @@ if __name__ == '__main__':
     for im_file in im_files:
         print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
         print('Demo for {}'.format(im_file))
-        demo(sess, net, im_file)
+        demo(sess, net, im_file, args.result_dir)

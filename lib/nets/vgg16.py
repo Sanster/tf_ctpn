@@ -53,7 +53,6 @@ class vgg16(Network):
             # exclude the conv weights that are fc weights in vgg16
             if v.name == (self._scope + '/fc6/weights:0') or \
                     v.name == (self._scope + '/fc7/weights:0'):
-                self._variables_to_fix[v.name] = v
                 continue
             # exclude the first conv layer to swap RGB to BGR
             if v.name == (self._scope + '/conv1/conv1_1/weights:0'):
@@ -65,7 +64,7 @@ class vgg16(Network):
 
         return variables_to_restore
 
-    def fix_variables(self, sess, pretrained_model):
+    def reverse_RGB_weights(self, sess, pretrained_model):
         print('Reverse VGG16 conv1_1 weights..')
         with tf.variable_scope('Fix_VGG16') as scope:
             with tf.device("/cpu:0"):

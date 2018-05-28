@@ -130,11 +130,17 @@ class SolverWrapper(object):
             # Set learning rate and momentum
             lr = tf.Variable(cfg.TRAIN.LEARNING_RATE, trainable=False)
 
-            # self.optimizer = tf.train.MomentumOptimizer(lr, cfg.TRAIN.MOMENTUM)
-            self.optimizer = tf.train.AdamOptimizer(lr)
+            if cfg.TRAIN.OPTIMIZER == 'Adam':
+                self.optimizer = tf.train.AdamOptimizer(lr)
+            elif cfg.TRAIN.OPTIMIZER == 'Momentum':
+                self.optimizer = tf.train.MomentumOptimizer(lr, cfg.TRAIN.MOMENTUM)
+            elif cfg.TRAIN.OPTIMIZER == 'RMS':
+                self.optimizer = tf.train.RMSPropOptimizer(lr)
+            else:
+                raise NotImplementedError
 
             global_step = tf.Variable(0, trainable=False)
-            with_clip = True
+            with_clip = False
             if with_clip:
                 tvars = tf.trainable_variables()
                 grads, norm = tf.clip_by_global_norm(tf.gradients(total_loss, tvars), 10.0)
@@ -188,7 +194,7 @@ class SolverWrapper(object):
         restorer = tf.train.Saver(variables_to_restore)
         restorer.restore(sess, self.pretrained_model)
         # Reverse RGB weights of conv1 to BGR(slim pre-trained model are use RGB input, opencv use BGR)
-        self.net.fix_variables(sess, self.pretrained_model)
+        self.net.reverse_RGB_weights(sess, self.pretrained_model)
         print('Loaded.')
         last_snapshot_iter = 0
         rate = cfg.TRAIN.LEARNING_RATE
