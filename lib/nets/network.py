@@ -143,7 +143,9 @@ class Network(object):
             anchors, anchor_length = tf.py_func(generate_anchors_pre,
                                                 [height, width,
                                                  self._feat_stride,
-                                                 cfg.CTPN.ANCHOR_WIDTH, cfg.CTPN.H_RADIO_STEP],
+                                                 cfg.CTPN.NUM_ANCHORS,
+                                                 cfg.CTPN.ANCHOR_WIDTH,
+                                                 cfg.CTPN.H_RADIO_STEP],
                                                 [tf.float32, tf.int32], name="generate_anchors")
             anchors.set_shape([None, 4])
             anchor_length.set_shape([])

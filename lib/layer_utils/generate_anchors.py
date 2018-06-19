@@ -11,34 +11,7 @@ from __future__ import print_function
 import numpy as np
 
 
-# Verify that we compute the same anchors as Shaoqing's matlab implementation:
-#
-#    >> load output/rpn_cachedir/faster_rcnn_VOC2007_ZF_stage1_rpn/anchors.mat
-#    >> anchors
-#
-#    anchors =
-#
-#       -83   -39   100    56
-#      -175   -87   192   104
-#      -359  -183   376   200
-#       -55   -55    72    72
-#      -119  -119   136   136
-#      -247  -247   264   264
-#       -35   -79    52    96
-#       -79  -167    96   184
-#      -167  -343   184   360
-
-# array([[ -83.,  -39.,  100.,   56.],
-#       [-175.,  -87.,  192.,  104.],
-#       [-359., -183.,  376.,  200.],
-#       [ -55.,  -55.,   72.,   72.],
-#       [-119., -119.,  136.,  136.],
-#       [-247., -247.,  264.,  264.],
-#       [ -35.,  -79.,   52.,   96.],
-#       [ -79., -167.,   96.,  184.],
-#       [-167., -343.,  184.,  360.]])
-
-def generate_anchors(base_height=11, anchors_size=10, anchor_width=16, h_ratio_step=0.7):
+def generate_anchors(base_height=11, num_anchors=10, anchor_width=16, h_ratio_step=0.7):
     """
     Generate anchor windows template by using different hight start from base_size
     According to the ctpn paper, anchor's width is always 16 pixels
@@ -46,18 +19,17 @@ def generate_anchors(base_height=11, anchors_size=10, anchor_width=16, h_ratio_s
     Anchor heights in ctpn sorce code: [11, 16, 23, 33, 48, 68, 97, 139, 198, 283]
     """
     base_anchor = np.array([1, 1, anchor_width, anchor_width]) - 1
-    h_ratios = h_ratio_step ** np.arange(0, anchors_size)
+    h_ratios = h_ratio_step ** np.arange(0, num_anchors)
 
     w, h, x_ctr, y_ctr = _whctrs(base_anchor)
-    ws = np.array([16 for _ in range(anchors_size)])
+    ws = np.array([16 for _ in range(num_anchors)])
 
-    # hs = np.ceil(base_height / h_ratios)
-    hs = np.asarray([11, 16, 23, 33, 48, 68, 97, 139, 198, 283])
+    hs = np.ceil(base_height / h_ratios)
     anchors = _mkanchors(ws, hs, x_ctr, y_ctr)
     return anchors
 
 
-def generate_anchors_pre(height, width, feat_stride, anchor_width=16, anchor_h_ratio_step=0.7):
+def generate_anchors_pre(height, width, feat_stride, num_anchors=10, anchor_width=16, anchor_h_ratio_step=0.7):
     """
     A wrapper function to generate anchors given by different height scale
     :arg
@@ -69,7 +41,7 @@ def generate_anchors_pre(height, width, feat_stride, anchor_width=16, anchor_h_r
       length: The total number of anchors
     """
     # print("width: %d, height: %d" %(width,height))
-    anchors = generate_anchors(h_ratio_step=anchor_h_ratio_step, anchor_width=anchor_width)
+    anchors = generate_anchors(num_anchors=num_anchors, h_ratio_step=anchor_h_ratio_step, anchor_width=anchor_width)
     A = anchors.shape[0]
     shift_x = np.arange(0, width) * feat_stride
     shift_y = np.arange(0, height) * feat_stride
@@ -104,10 +76,10 @@ def _mkanchors(ws, hs, x_ctr, y_ctr):
 
     ws = ws[:, np.newaxis]
     hs = hs[:, np.newaxis]
-    anchors = np.hstack((x_ctr - ws/2,
-                         y_ctr - hs/2,
-                         x_ctr + ws/2,
-                         y_ctr + hs/2)).astype(np.int32)
+    anchors = np.hstack((x_ctr - ws / 2,
+                         y_ctr - hs / 2,
+                         x_ctr + ws / 2,
+                         y_ctr + hs / 2)).astype(np.int32)
     return anchors
 
 
@@ -141,12 +113,11 @@ if __name__ == '__main__':
     import time
 
     t = time.time()
-    a = generate_anchors()
-    print(time.time() - t)
-    print(a)
+    anchors = generate_anchors(base_height=11, num_anchors=6, anchor_width=16, h_ratio_step=0.7)
+    print(anchors)
+    for anchor in anchors:
+        print(anchor[3] - anchor[1])
 
-    c = generate_anchors_pre(47, 37, 16)
-    print(c)
-    from IPython import embed;
-
-    embed()
+    # c, length = generate_anchors_pre(47, 37, 16, 6)
+    # print(c)
+    # print(length)
