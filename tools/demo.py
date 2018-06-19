@@ -179,9 +179,9 @@ if __name__ == '__main__':
     net.create_architecture("TEST",
                             num_classes=len(CLASSES),
                             tag='default',
-                            anchor_width=16,
-                            anchor_h_ratio_step=0.7,
-                            num_anchors=10)
+                            anchor_width=cfg.CTPN.ANCHOR_WIDTH,
+                            anchor_h_ratio_step=cfg.CTPN.H_RADIO_STEP,
+                            num_anchors=cfg.CTPN.NUM_ANCHORS)
     saver = tf.train.Saver()
     saver.restore(sess, ckpt.model_checkpoint_path)
 
