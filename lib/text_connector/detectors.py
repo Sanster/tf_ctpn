@@ -9,12 +9,12 @@ from .text_connect_cfg import Config as TextLineCfg
 
 
 class TextDetector:
-    def __init__(self):
-        # self.mode= cfg.TEST.DETECT_MODE
-        # if self.mode == "H":
-        self.text_proposal_connector = TextProposalConnector()
-        # elif self.mode == "O":
-        #     self.text_proposal_connector=TextProposalConnectorOriented()
+    def __init__(self, oriented):
+        if oriented:
+            print('Use TextProposalConnectorOriented')
+            self.text_proposal_connector = TextProposalConnectorOriented()
+        else:
+            self.text_proposal_connector = TextProposalConnector()
 
     @staticmethod
     def pre_process(text_proposals, scores):

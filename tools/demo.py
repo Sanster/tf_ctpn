@@ -49,14 +49,13 @@ def vis_detections(im, im_name, class_name, dets, result_dir, thresh=0.5, text=F
     fig, ax = plt.subplots(figsize=(12, 12))
     ax.imshow(im, aspect='equal')
     for i in inds:
-        bbox = dets[i, :4]
+        bbox = dets[i, :8]
         score = dets[i, -1]
 
-        ax.add_patch(
-            plt.Rectangle((bbox[0], bbox[1]),
-                          bbox[2] - bbox[0],
-                          bbox[3] - bbox[1], fill=False,
-                          edgecolor='red', linewidth=3.5)
+        ax.add_line(
+            plt.Line2D([bbox[0], bbox[2], bbox[6], bbox[4], bbox[0]],
+                       [bbox[1], bbox[3], bbox[7], bbox[5], bbox[1]],
+                       color='red', linewidth=3)
         )
 
         if text:
@@ -99,7 +98,7 @@ def draw_rpn_boxes(img, img_name, boxes, scores, nms, save_dir):
     cv2.imwrite(os.path.join(save_dir, file_name), out)
 
 
-def demo(sess, net, im_file, result_dir):
+def demo(sess, net, im_file, result_dir, oriented=False):
     """Detect object classes in an image using pre-computed object proposals."""
 
     # Load the demo image
@@ -118,16 +117,12 @@ def demo(sess, net, im_file, result_dir):
     draw_rpn_boxes(im, img_name, boxes, scores[:, np.newaxis], False, result_dir)
 
     # Run TextDetector to merge small box
-    line_detector = TextDetector()
+    line_detector = TextDetector(oriented)
     text_lines = line_detector.detect(boxes, scores[:, np.newaxis], im.shape[:2])
     print("Detect %d text lines" % len(text_lines))
 
-    boxes = np.hstack((text_lines[:, 0:2], text_lines[:, 6:8]))
-    scores = text_lines[:, -1:]
-
     # Visualize detections
-    dets = np.hstack((boxes, scores)).astype(np.float32)
-    vis_detections(im, img_name, CLASSES[1], dets, result_dir, thresh=0)
+    vis_detections(im, img_name, CLASSES[1], text_lines, result_dir, thresh=0)
 
 
 def parse_args():
@@ -137,6 +132,7 @@ def parse_args():
     parser.add_argument('--img_dir', default='./data/demo')
     parser.add_argument('--dataset', dest='dataset', help='model tag', default='voc_2007_trainval')
     parser.add_argument('--tag', dest='tag', help='model tag', default='default')
+    parser.add_argument('-o', '--oriented', action='store_true', default=False, help='output rotated detect box')
     args = parser.parse_args()
 
     if not os.path.exists(args.img_dir):
@@ -191,4 +187,4 @@ if __name__ == '__main__':
     for im_file in im_files:
         print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
         print('Demo for {}'.format(im_file))
-        demo(sess, net, im_file, args.result_dir)
+        demo(sess, net, im_file, args.result_dir, args.oriented)
