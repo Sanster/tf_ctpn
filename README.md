@@ -49,6 +49,19 @@ The output checkpoint file will be saved at `./output/vgg16/voc_2007_trainval/de
 tensorboard --logdir=./tensorboard
 ```
 
+# Run on ICDRA15 Incidental Scene Text
+```
+python3 tools/icdar.py --img_dir=path/to/ICDAR15/incidental_scene_text/ch4_test_images
+```
+
+After finish, a submit.zip file will generated in `tools/ICDAR15`, than run the `script.py`
+
+```
+cd tools/ICDAR15
+# use python2
+python script.py -g=gt.zip -s=submit.zip
+```
+
 # Some Notes
 - Change configs in `./lib/text_connector/text_connect_cfg.py` to match your text detect task.
 - Text is very different from 'object' defined in ImageNet. When use tf-slim pre-trained VGG16 model, I need to
@@ -57,4 +70,3 @@ make all layer trainable to get good text detect results
 # Todo
 - [ ] Support ResNet
 - [ ] Support MobileNet
-- [ ] Test on http://rrc.cvc.uab.es/?ch=4&com=evaluation&task=1

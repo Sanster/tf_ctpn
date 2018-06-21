@@ -1,22 +1,12 @@
 #!/usr/bin/env python
 
-# --------------------------------------------------------
-# Tensorflow Faster R-CNN
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Xinlei Chen, based on code from Ross Girshick
-# --------------------------------------------------------
-
-"""
-Demo script showing detections in sample images.
-
-See README.md for installation instructions before running.
-"""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
 import glob
 import time
+from zipfile import ZipFile
 
 import _init_paths
 from model.config import cfg
@@ -39,66 +29,7 @@ from nets.mobilenet_v1 import mobilenetv1
 CLASSES = ('__background__', 'text')
 
 
-def vis_detections(im, im_name, class_name, dets, result_dir, thresh=0.5, text=False):
-    """Draw detected bounding boxes."""
-    inds = np.where(dets[:, -1] >= thresh)[0]
-    if len(inds) == 0:
-        return
-
-    im = im[:, :, (2, 1, 0)]
-    fig, ax = plt.subplots(figsize=(12, 12))
-    ax.imshow(im, aspect='equal')
-    for i in inds:
-        bbox = dets[i, :8]
-        score = dets[i, -1]
-
-        ax.add_line(
-            plt.Line2D([bbox[0], bbox[2], bbox[6], bbox[4], bbox[0]],
-                       [bbox[1], bbox[3], bbox[7], bbox[5], bbox[1]],
-                       color='red', linewidth=3)
-        )
-
-        if text:
-            ax.text(bbox[0], bbox[1] - 2,
-                    '{:s} {:.3f}'.format(class_name, score),
-                    bbox=dict(facecolor='blue', alpha=0.5),
-                    fontsize=14, color='white')
-
-    ax.set_title(('{} detections with '
-                  'p({} | box) >= {:.1f}').format(class_name, class_name,
-                                                  thresh),
-                 fontsize=14)
-    plt.axis('off')
-    plt.tight_layout()
-    plt.draw()
-    plt.savefig(os.path.join(result_dir, im_name))
-    plt.show()
-
-
-def draw_rpn_boxes(img, img_name, boxes, scores, nms, save_dir):
-    """
-    :param boxes: [(x1, y1, x2, y2)]
-    """
-    base_name = img_name.split('/')[-1]
-    color = (0, 255, 0)
-    out = img.copy()
-
-    if nms:
-        boxes, scores = TextDetector.pre_process(boxes, scores)
-        file_name = "%s_rpn_nms.jpg" % base_name
-    else:
-        file_name = "%s_rpn.jpg" % base_name
-
-    for i, box in enumerate(boxes):
-        cv2.rectangle(out, (box[0], box[1]), (box[2], box[3]), color, 2)
-        cx = int((box[0] + box[2]) / 2)
-        cy = int((box[1] + box[3]) / 2)
-        cv2.putText(out, "%.01f" % scores[i], (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.2, (255, 0, 0))
-
-    cv2.imwrite(os.path.join(save_dir, file_name), out)
-
-
-def demo(sess, net, im_file, result_dir, viz=False, oriented=False):
+def demo(sess, net, im_file, icdar_dir, oriented=False):
     """Detect object classes in an image using pre-computed object proposals."""
 
     # Load the demo image
@@ -110,10 +41,6 @@ def demo(sess, net, im_file, result_dir, viz=False, oriented=False):
     scores, boxes = im_detect(sess, net, im)
     timer.toc()
 
-    img_name = im_file.split('/')[-1]
-    draw_rpn_boxes(im, img_name, boxes, scores[:, np.newaxis], True, result_dir)
-    draw_rpn_boxes(im, img_name, boxes, scores[:, np.newaxis], False, result_dir)
-
     # Run TextDetector to merge small box
     line_detector = TextDetector(oriented)
 
@@ -121,9 +48,23 @@ def demo(sess, net, im_file, result_dir, viz=False, oriented=False):
     text_lines = line_detector.detect(boxes, scores[:, np.newaxis], im.shape[:2])
     print("Image %s, detect %d text lines in %.3fs" % (im_file, len(text_lines), timer.diff))
 
-    # Visualize detections
-    if viz:
-        vis_detections(im, img_name, CLASSES[1], text_lines, result_dir)
+    return save_ICDAR15_result(text_lines, icdar_dir, im_file)
+
+
+def save_ICDAR15_result(text_lines, icdar_dir, im_file):
+    # ICDAR15 script.py need clockwise box
+    boxes = [[l[0], l[1], l[2], l[3], l[6], l[7], l[4], l[5]] for l in text_lines]
+
+    im_name = im_file.split('/')[-1].split('.')[0]
+    res_file = os.path.join(icdar_dir, 'res_%s.txt' % im_name)
+    if not os.path.exists(icdar_dir):
+        os.makedirs(icdar_dir)
+
+    with open(res_file, mode='w') as f:
+        for line in boxes:
+            f.write('%d,%d,%d,%d,%d,%d,%d,%d\n' % (line[0], line[1], line[2], line[3],
+                                                   line[4], line[5], line[6], line[7]))
+    return res_file
 
 
 def parse_args():
@@ -133,7 +74,6 @@ def parse_args():
     parser.add_argument('--img_dir', default='./data/demo')
     parser.add_argument('--dataset', dest='dataset', help='model tag', default='voc_2007_trainval')
     parser.add_argument('--tag', dest='tag', help='model tag', default='default')
-    parser.add_argument('--viz', action='store_true', default=False, help='show result')
     parser.add_argument('-o', '--oriented', action='store_true', default=False, help='output rotated detect box')
     args = parser.parse_args()
 
@@ -174,6 +114,7 @@ if __name__ == '__main__':
     else:
         raise NotImplementedError
 
+    cfg.USE_GPU_NMS = True
     net.create_architecture("TEST",
                             num_classes=len(CLASSES),
                             tag=args.tag,
@@ -185,6 +126,17 @@ if __name__ == '__main__':
 
     print('Loaded network {:s}'.format(ckpt.model_checkpoint_path))
 
+    txt_files = []
+    icdar_dir = os.path.join(args.result_dir, 'ICDAR15')
+
     im_files = glob.glob(args.img_dir + "/*.*")
     for im_file in im_files:
-        demo(sess, net, im_file, args.result_dir, args.viz, args.oriented)
+        txt_file = demo(sess, net, im_file, icdar_dir, args.oriented)
+        txt_files.append(txt_file)
+
+    zip_path = os.path.join('./tools/ICDAR15', 'submit.zip')
+    print(os.path.abspath(zip_path))
+    with ZipFile(zip_path, 'w') as f:
+        for txt in txt_files:
+            f.write(txt, txt.split('/')[-1])
+
