@@ -39,7 +39,7 @@ from nets.mobilenet_v1 import mobilenetv1
 CLASSES = ('__background__', 'text')
 
 
-def vis_detections(im, im_name, class_name, dets, result_dir, thresh=0.5, text=False):
+def vis_detections(im, class_name, dets, thresh=0.5, text=False):
     """Draw detected bounding boxes."""
     inds = np.where(dets[:, -1] >= thresh)[0]
     if len(inds) == 0:
@@ -71,8 +71,25 @@ def vis_detections(im, im_name, class_name, dets, result_dir, thresh=0.5, text=F
     plt.axis('off')
     plt.tight_layout()
     plt.draw()
-    plt.savefig(os.path.join(result_dir, im_name))
     plt.show()
+
+
+def save_result(img, img_name, text_lines, result_dir):
+    dst = img
+    color = (0, 150, 0)
+    for bbox in text_lines:
+        bbox = [int(x) for x in bbox]
+        p1 = (bbox[0], bbox[1])
+        p2 = (bbox[2], bbox[3])
+        p3 = (bbox[6], bbox[7])
+        p4 = (bbox[4], bbox[5])
+        dst = cv2.line(dst, p1, p2, color, 2)
+        dst = cv2.line(dst, p2, p3, color, 2)
+        dst = cv2.line(dst, p3, p4, color, 2)
+        dst = cv2.line(dst, p4, p1, color, 2)
+
+    img_path = os.path.join(result_dir, img_name + '.jpg')
+    cv2.imwrite(img_path, dst)
 
 
 def draw_rpn_boxes(img, img_name, boxes, scores, nms, save_dir):
@@ -121,9 +138,11 @@ def demo(sess, net, im_file, result_dir, viz=False, oriented=False):
     text_lines = line_detector.detect(boxes, scores[:, np.newaxis], im.shape[:2])
     print("Image %s, detect %d text lines in %.3fs" % (im_file, len(text_lines), timer.diff))
 
+    save_result(im, img_name, text_lines, result_dir)
+
     # Visualize detections
     if viz:
-        vis_detections(im, img_name, CLASSES[1], text_lines, result_dir)
+        vis_detections(im, CLASSES[1], text_lines)
 
 
 def parse_args():
