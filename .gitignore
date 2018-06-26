@@ -11,3 +11,4 @@ data/pretrained_model/*.ckpt
 data/result/*
 !data/result/.keep
 submit.zip
+*.zip

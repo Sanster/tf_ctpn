@@ -48,11 +48,11 @@ def demo(sess, net, im_file, icdar_dir, oriented=False):
     text_lines = line_detector.detect(boxes, scores[:, np.newaxis], im.shape[:2])
     print("Image %s, detect %d text lines in %.3fs" % (im_file, len(text_lines), timer.diff))
 
-    return save_ICDAR15_result(text_lines, icdar_dir, im_file)
+    return save_result_txt(text_lines, icdar_dir, im_file)
 
 
-def save_ICDAR15_result(text_lines, icdar_dir, im_file):
-    # ICDAR15 script.py need clockwise box
+def save_result_txt(text_lines, icdar_dir, im_file):
+    # ICDAR need box points in clockwise
     boxes = [[l[0], l[1], l[2], l[3], l[6], l[7], l[4], l[5]] for l in text_lines]
 
     im_name = im_file.split('/')[-1].split('.')[0]
@@ -75,6 +75,11 @@ def parse_args():
     parser.add_argument('--dataset', dest='dataset', help='model tag', default='voc_2007_trainval')
     parser.add_argument('--tag', dest='tag', help='model tag', default='default')
     parser.add_argument('-o', '--oriented', action='store_true', default=False, help='output rotated detect box')
+    parser.add_argument('-c', '--challenge', type=str, help='Which challenge to run',
+                        choices=[
+                            'IST15',  # ICDAR15 - Challenge 4 - Incidental Scene Text
+                            'MLT17'  # Multi-lingual scene text detection
+                        ])
     args = parser.parse_args()
 
     if not os.path.exists(args.img_dir):
@@ -127,16 +132,15 @@ if __name__ == '__main__':
     print('Loaded network {:s}'.format(ckpt.model_checkpoint_path))
 
     txt_files = []
-    icdar_dir = os.path.join(args.result_dir, 'ICDAR15')
+    icdar_dir = os.path.join(args.result_dir, args.challenge)
 
     im_files = glob.glob(args.img_dir + "/*.*")
     for im_file in im_files:
         txt_file = demo(sess, net, im_file, icdar_dir, args.oriented)
         txt_files.append(txt_file)
 
-    zip_path = os.path.join('./tools/ICDAR15', 'submit.zip')
+    zip_path = os.path.join('./tools/ICDAR', '%s_submit.zip' % args.challenge)
     print(os.path.abspath(zip_path))
     with ZipFile(zip_path, 'w') as f:
         for txt in txt_files:
             f.write(txt, txt.split('/')[-1])
-

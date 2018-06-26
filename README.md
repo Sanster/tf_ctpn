@@ -51,7 +51,7 @@ tensorboard --logdir=./tensorboard
 
 # Run on ICDRA15 Incidental Scene Text
 ```
-python3 tools/icdar.py --img_dir=path/to/ICDAR15/incidental_scene_text/ch4_test_images
+python3 tools/icdar.py --img_dir=path/to/ICDAR15/incidental_scene_text/ch4_test_images --challenge=ICDAR15
 ```
 
 After finish, a submit.zip file will generated in `tools/ICDAR15`, than run the `script.py`
