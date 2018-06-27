@@ -43,14 +43,14 @@ def validate_data(gtFilePath, submFilePath, evaluationParams):
 
     # Validate format of GroundTruth
     for k in gt:
-        rrc_evaluation_funcs.parse_lines_in_file(k, gt[k], evaluationParams['CRLF'], evaluationParams['LTRB'], True)
+        rrc_evaluation_funcs.validate_lines_in_file(k, gt[k], evaluationParams['CRLF'], evaluationParams['LTRB'], True)
 
     # Validate format of results
     for k in subm:
         if (k in gt) == False:
             raise Exception("The sample %s not present in GT" % k)
 
-        rrc_evaluation_funcs.parse_lines_in_file(k, subm[k], evaluationParams['CRLF'], evaluationParams['LTRB'],
+        rrc_evaluation_funcs.validate_lines_in_file(k, subm[k], evaluationParams['CRLF'], evaluationParams['LTRB'],
                                                  False, evaluationParams['CONFIDENCES'])
 
 
