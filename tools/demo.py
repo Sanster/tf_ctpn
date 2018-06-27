@@ -88,7 +88,7 @@ def save_result(img, img_name, text_lines, result_dir):
         dst = cv2.line(dst, p3, p4, color, 2)
         dst = cv2.line(dst, p4, p1, color, 2)
 
-    img_path = os.path.join(result_dir, img_name + '.jpg')
+    img_path = os.path.join(result_dir, img_name[0:-4] + '.jpg')
     cv2.imwrite(img_path, dst)
 
 
