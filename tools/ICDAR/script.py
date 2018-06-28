@@ -24,7 +24,7 @@ def default_evaluation_params():
         'AREA_PRECISION_CONSTRAINT': 0.5,
         'GT_SAMPLE_NAME_2_ID': 'gt_img_([0-9]+).txt',
         'DET_SAMPLE_NAME_2_ID': 'res_img_([0-9]+).txt',
-        'LTRB': False,  # LTRB:2points(left,top,right,bottom) or 4 points(x1,y1,x2,y2,x3,y3,x4,y4)
+        'LTRB': True,  # LTRB:2points(left,top,right,bottom) or 4 points(x1,y1,x2,y2,x3,y3,x4,y4)
         'CRLF': False,  # Lines are delimited by Windows CRLF format
         'CONFIDENCES': False,  # Detections must include confidence value. AP will be calculated
         'PER_SAMPLE_RESULTS': True  # Generate per sample results and produce data for visualization
@@ -147,6 +147,8 @@ def evaluate_method(gtFilePath, submFilePath, evaluationParams):
     gt = rrc_evaluation_funcs.load_zip_file(gtFilePath, evaluationParams['GT_SAMPLE_NAME_2_ID'])
     subm = rrc_evaluation_funcs.load_zip_file(submFilePath, evaluationParams['DET_SAMPLE_NAME_2_ID'], True)
 
+    numGlobalDontCareGt = 0
+    numGlobalDontCareDet = 0
     numGlobalCareGt = 0;
     numGlobalCareDet = 0;
 
@@ -229,6 +231,7 @@ def evaluate_method(gtFilePath, submFilePath, evaluationParams):
                     detPol = polygon_from_points(points)
                 detPols.append(detPol)
                 detPolPoints.append(points)
+                # 过滤掉 don't care 区域
                 if len(gtDontCarePolsNum) > 0:
                     for dontCarePol in gtDontCarePolsNum:
                         dontCarePol = gtPols[dontCarePol]
@@ -256,8 +259,7 @@ def evaluate_method(gtFilePath, submFilePath, evaluationParams):
 
                 for gtNum in range(len(gtPols)):
                     for detNum in range(len(detPols)):
-                        if gtRectMat[gtNum] == 0 and detRectMat[
-                            detNum] == 0 and gtNum not in gtDontCarePolsNum and detNum not in detDontCarePolsNum:
+                        if gtRectMat[gtNum] == 0 and detRectMat[detNum] == 0 and gtNum not in gtDontCarePolsNum and detNum not in detDontCarePolsNum:
                             if iouMat[gtNum, detNum] > evaluationParams['IOU_CONSTRAINT']:
                                 gtRectMat[gtNum] = 1
                                 detRectMat[detNum] = 1
@@ -295,6 +297,8 @@ def evaluate_method(gtFilePath, submFilePath, evaluationParams):
         matchedSum += detMatched
         numGlobalCareGt += numGtCare
         numGlobalCareDet += numDetCare
+        numGlobalDontCareGt += len(gtDontCarePolsNum)
+        numGlobalDontCareDet += len(detDontCarePolsNum)
 
         if evaluationParams['PER_SAMPLE_RESULTS']:
             perSampleMetrics[resFile] = {
@@ -317,6 +321,11 @@ def evaluate_method(gtFilePath, submFilePath, evaluationParams):
     if evaluationParams['CONFIDENCES']:
         AP = compute_ap(arrGlobalConfidences, arrGlobalMatches, numGlobalCareGt)
 
+    print numGlobalCareGt
+    print numGlobalCareDet
+    print matchedSum
+    print numGlobalDontCareGt
+    print numGlobalDontCareDet
     methodRecall = 0 if numGlobalCareGt == 0 else float(matchedSum) / numGlobalCareGt
     methodPrecision = 0 if numGlobalCareDet == 0 else float(matchedSum) / numGlobalCareDet
     methodHmean = 0 if methodRecall + methodPrecision == 0 else 2 * methodRecall * methodPrecision / (

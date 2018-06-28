@@ -45,7 +45,7 @@ def resnet_arg_scope(is_training=True,
             return arg_sc
 
 
-class resnetv1(Network):
+class Resnetv1(Network):
     def __init__(self, num_layers=50):
         Network.__init__(self)
         self._feat_stride = [16, ]
@@ -90,18 +90,6 @@ class resnetv1(Network):
         self._layers['head'] = net_conv
 
         return net_conv
-
-    def _head_to_tail(self, pool5, is_training, reuse=None):
-        with slim.arg_scope(resnet_arg_scope(is_training=is_training)):
-            fc7, _ = resnet_v1.resnet_v1(pool5,
-                                         self._blocks[-1:],
-                                         global_pool=False,
-                                         include_root_block=False,
-                                         reuse=reuse,
-                                         scope=self._scope)
-            # average pooling done by reduce_mean
-            fc7 = tf.reduce_mean(fc7, axis=[1, 2])
-        return fc7
 
     def _decide_blocks(self):
         # choose different blocks for different number of layers

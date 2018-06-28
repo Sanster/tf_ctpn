@@ -19,7 +19,7 @@ import sys
 
 import tensorflow as tf
 from nets.vgg16 import vgg16
-from nets.resnet_v1 import resnetv1
+from nets.resnet_v1 import Resnetv1
 from nets.mobilenet_v1 import mobilenetv1
 
 
@@ -124,11 +124,11 @@ if __name__ == '__main__':
     if args.net == 'vgg16':
         net = vgg16()
     elif args.net == 'res50':
-        net = resnetv1(num_layers=50)
+        net = Resnetv1(num_layers=50)
     elif args.net == 'res101':
-        net = resnetv1(num_layers=101)
+        net = Resnetv1(num_layers=101)
     elif args.net == 'res152':
-        net = resnetv1(num_layers=152)
+        net = Resnetv1(num_layers=152)
     elif args.net == 'mobile':
         net = mobilenetv1()
     else:

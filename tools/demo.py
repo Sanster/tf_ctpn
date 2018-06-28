@@ -33,7 +33,7 @@ import cv2
 import argparse
 
 from nets.vgg16 import vgg16
-from nets.resnet_v1 import resnetv1
+from nets.resnet_v1 import Resnetv1
 from nets.mobilenet_v1 import mobilenetv1
 
 CLASSES = ('__background__', 'text')
@@ -187,7 +187,7 @@ if __name__ == '__main__':
     if netname == 'vgg16':
         net = vgg16()
     elif netname == 'res101':
-        net = resnetv1(num_layers=101)
+        net = Resnetv1(num_layers=101)
     elif netname == 'mobile':
         net = mobilenetv1()
     else:
