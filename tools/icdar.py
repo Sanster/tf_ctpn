@@ -152,7 +152,7 @@ if __name__ == '__main__':
         txt_file = demo(sess, net, im_file, icdar_dir, oriented=args.oriented, ltrb=ltrb)
         txt_files.append(txt_file)
 
-    zip_path = os.path.join('./tools/ICDAR', '%s_%s_submit.zip' % (args.challenge, args.tag))
+    zip_path = os.path.join('./data/ICDAR_submit', '%s_%s_submit.zip' % (args.challenge, args.tag))
     print(os.path.abspath(zip_path))
     with ZipFile(zip_path, 'w') as f:
         for txt in txt_files:
