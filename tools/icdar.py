@@ -29,7 +29,7 @@ from nets.mobilenet_v1 import mobilenetv1
 CLASSES = ('__background__', 'text')
 
 
-def demo(sess, net, im_file, icdar_dir, oriented=False):
+def demo(sess, net, im_file, icdar_dir, oriented=False, ltrb=False):
     """Detect object classes in an image using pre-computed object proposals."""
 
     # Load the demo image
@@ -48,7 +48,7 @@ def demo(sess, net, im_file, icdar_dir, oriented=False):
     text_lines = line_detector.detect(boxes, scores[:, np.newaxis], im.shape[:2])
     print("Image %s, detect %d text lines in %.3fs" % (im_file, len(text_lines), timer.diff))
 
-    return save_result_txt(text_lines, icdar_dir, im_file, True)
+    return save_result_txt(text_lines, icdar_dir, im_file, ltrb)
 
 
 def save_result_txt(text_lines, icdar_dir, im_file, ltrb=False):
@@ -143,9 +143,13 @@ if __name__ == '__main__':
     txt_files = []
     icdar_dir = os.path.join(args.result_dir, args.challenge)
 
+    ltrb = False
+    if args.challenge in ['ICDAR13', 'ICDAR13_Det']:
+        ltrb = True
+
     im_files = glob.glob(args.img_dir + "/*.*")
     for im_file in im_files:
-        txt_file = demo(sess, net, im_file, icdar_dir, args.oriented)
+        txt_file = demo(sess, net, im_file, icdar_dir, oriented=args.oriented, ltrb=ltrb)
         txt_files.append(txt_file)
 
     zip_path = os.path.join('./tools/ICDAR', '%s_%s_submit.zip' % (args.challenge, args.tag))

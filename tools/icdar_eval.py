@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+
+"""
+Combine all ICDAR eval method into one file
+"""
+
 import argparse
 import time
 from functools import reduce
@@ -461,6 +466,9 @@ if __name__ == '__main__':
                                      with_confidence=False,
                                      with_script=False,
                                      with_transcription=False)
+    elif args.challenge == 'MLT':
+        # TODO: add MLT eval method
+        pass
 
     start_time = time.time()
     e = Evaluater()

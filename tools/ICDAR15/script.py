@@ -24,7 +24,7 @@ def default_evaluation_params():
         'AREA_PRECISION_CONSTRAINT': 0.5,
         'GT_SAMPLE_NAME_2_ID': 'gt_img_([0-9]+).txt',
         'DET_SAMPLE_NAME_2_ID': 'res_img_([0-9]+).txt',
-        'LTRB': True,  # LTRB:2points(left,top,right,bottom) or 4 points(x1,y1,x2,y2,x3,y3,x4,y4)
+        'LTRB': False,  # LTRB:2points(left,top,right,bottom) or 4 points(x1,y1,x2,y2,x3,y3,x4,y4)
         'CRLF': False,  # Lines are delimited by Windows CRLF format
         'CONFIDENCES': False,  # Detections must include confidence value. AP will be calculated
         'PER_SAMPLE_RESULTS': True  # Generate per sample results and produce data for visualization
@@ -321,11 +321,6 @@ def evaluate_method(gtFilePath, submFilePath, evaluationParams):
     if evaluationParams['CONFIDENCES']:
         AP = compute_ap(arrGlobalConfidences, arrGlobalMatches, numGlobalCareGt)
 
-    print numGlobalCareGt
-    print numGlobalCareDet
-    print matchedSum
-    print numGlobalDontCareGt
-    print numGlobalDontCareDet
     methodRecall = 0 if numGlobalCareGt == 0 else float(matchedSum) / numGlobalCareGt
     methodPrecision = 0 if numGlobalCareDet == 0 else float(matchedSum) / numGlobalCareDet
     methodHmean = 0 if methodRecall + methodPrecision == 0 else 2 * methodRecall * methodPrecision / (
