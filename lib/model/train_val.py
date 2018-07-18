@@ -182,20 +182,26 @@ class SolverWrapper(object):
         # Initial file lists are empty
         np_paths = []
         ss_paths = []
-        # Fresh train directly from ImageNet weights
-        print('Loading initial model weights from {:s}'.format(self.pretrained_model))
+
         variables = tf.global_variables()
         # Initialize all variables first
         sess.run(tf.variables_initializer(variables, name='init'))
-        var_keep_dic = self.get_variables_in_checkpoint_file(self.pretrained_model)
-        # Get the variables to restore, ignoring the variables to fix
-        variables_to_restore = self.net.get_variables_to_restore(variables, var_keep_dic)
 
-        restorer = tf.train.Saver(variables_to_restore)
-        restorer.restore(sess, self.pretrained_model)
-        # Reverse RGB weights of conv1 to BGR(slim pre-trained model are use RGB input, opencv use BGR)
-        self.net.reverse_RGB_weights(sess, self.pretrained_model)
-        print('Loaded.')
+        if self.pretrained_model is not None:
+            # Fresh train directly from ImageNet weights
+            print('Loading initial model weights from {:s}'.format(self.pretrained_model))
+
+            var_keep_dic = self.get_variables_in_checkpoint_file(self.pretrained_model)
+            # Get the variables to restore, ignoring the variables to fix
+            variables_to_restore = self.net.get_variables_to_restore(variables, var_keep_dic)
+
+            restorer = tf.train.Saver(variables_to_restore)
+            restorer.restore(sess, self.pretrained_model)
+            # Reverse RGB weights of conv1 to BGR(slim pre-trained model are use RGB input, opencv use BGR)
+            self.net.reverse_RGB_weights(sess, self.pretrained_model)
+
+            print('Loaded.')
+
         last_snapshot_iter = 0
         rate = cfg.TRAIN.LEARNING_RATE
         stepsizes = list(cfg.TRAIN.STEPSIZE)

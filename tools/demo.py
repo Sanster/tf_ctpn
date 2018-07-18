@@ -35,6 +35,7 @@ import argparse
 from nets.vgg16 import vgg16
 from nets.resnet_v1 import Resnetv1
 from nets.mobilenet_v1 import mobilenetv1
+from nets.squeezenet import SqueezeNet
 
 CLASSES = ('__background__', 'text')
 
@@ -148,7 +149,7 @@ def demo(sess, net, im_file, result_dir, viz=False, oriented=False):
 def parse_args():
     """Parse input arguments."""
     parser = argparse.ArgumentParser(description='Tensorflow CTPN demo')
-    parser.add_argument('--net', dest='net', choices=['vgg16'], default='vgg16')
+    parser.add_argument('--net', dest='net', choices=['vgg16', 'squeeze'], default='vgg16')
     parser.add_argument('--img_dir', default='./data/demo')
     parser.add_argument('--dataset', dest='dataset', help='model tag', default='voc_2007_trainval')
     parser.add_argument('--tag', dest='tag', help='model tag', default='default')
@@ -190,6 +191,8 @@ if __name__ == '__main__':
         net = Resnetv1(num_layers=101)
     elif netname == 'mobile':
         net = mobilenetv1()
+    elif args.net == 'squeeze':
+        net = SqueezeNet()
     else:
         raise NotImplementedError
 

@@ -21,6 +21,7 @@ import tensorflow as tf
 from nets.vgg16 import vgg16
 from nets.resnet_v1 import Resnetv1
 from nets.mobilenet_v1 import mobilenetv1
+from nets.squeezenet import SqueezeNet
 
 
 def parse_args():
@@ -32,7 +33,7 @@ def parse_args():
                         help='optional config file',
                         default='./data/cfgs/vgg16.yml', type=str)
     parser.add_argument('--pretrained_model',
-                        default='./data/pretrained_model/vgg_16.ckpt',
+                        default=None,
                         help='path to pretrained model, initialize with pretrained model weights',
                         type=str)
     parser.add_argument('--imdb', dest='imdb_name',
@@ -48,7 +49,8 @@ def parse_args():
                         help='tag of the model',
                         default=None, type=str)
     parser.add_argument('--net', dest='net',
-                        help='vgg16, res50, res101, res152, mobile',
+                        help='vgg16, res50, res101, res152, mobile, squeeze',
+                        choices=['vgg16', 'res50', 'res101', 'res152', 'mobile', 'squeeze'],
                         default='vgg16', type=str)
     parser.add_argument('--set', dest='set_cfgs',
                         help='set config keys', default=None,
@@ -131,6 +133,8 @@ if __name__ == '__main__':
         net = Resnetv1(num_layers=152)
     elif args.net == 'mobile':
         net = mobilenetv1()
+    elif args.net == 'squeeze':
+        net = SqueezeNet()
     else:
         raise NotImplementedError
 

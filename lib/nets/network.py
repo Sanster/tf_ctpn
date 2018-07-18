@@ -82,7 +82,7 @@ class Network(object):
         with tf.variable_scope(name) as scope:
             rois, rpn_scores = tf.py_func(proposal_top_layer,
                                           [rpn_cls_prob, rpn_bbox_pred, self._im_info,
-                                           self._feat_stride, self._anchors, self._num_anchors],
+                                           self._anchors, self._num_anchors],
                                           [tf.float32, tf.float32], name="proposal_top")
             rois.set_shape([cfg.TEST.RPN_TOP_N, 5])
             rpn_scores.set_shape([cfg.TEST.RPN_TOP_N, 1])
@@ -96,7 +96,7 @@ class Network(object):
         with tf.variable_scope(name) as scope:
             rois, rpn_scores = tf.py_func(proposal_layer,
                                           [rpn_cls_prob, rpn_bbox_pred, self._im_info, self._mode,
-                                           self._feat_stride, self._anchors, self._num_anchors],
+                                           self._anchors, self._num_anchors],
                                           [tf.float32, tf.float32], name="proposal")
             rois.set_shape([None, 5])
             rpn_scores.set_shape([None, 1])
@@ -116,7 +116,7 @@ class Network(object):
         with tf.variable_scope(name) as scope:
             rpn_labels, rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights = tf.py_func(
                 anchor_target_layer,
-                [rpn_cls_score, self._gt_boxes, self._im_info, self._feat_stride, self._anchors, self._num_anchors],
+                [rpn_cls_score, self._gt_boxes, self._im_info, self._anchors, self._num_anchors],
                 [tf.float32, tf.float32, tf.float32, tf.float32],
                 name="anchor_target")
 
@@ -135,11 +135,17 @@ class Network(object):
 
         return rpn_labels
 
-    def _anchor_component(self):
+    def _anchor_component(self, net_conv):
+        # Directly get cnn out shape
+        cnn_out_shape = tf.shape(net_conv)
+        height = cnn_out_shape[1]
+        width = cnn_out_shape[2]
+
         with tf.variable_scope('ANCHOR_' + self._tag) as scope:
             # just to get the shape right
-            height = tf.to_int32(tf.ceil(self._im_info[0] / np.float32(self._feat_stride[0])))
-            width = tf.to_int32(tf.ceil(self._im_info[1] / np.float32(self._feat_stride[0])))
+            # height = tf.to_int32(tf.ceil(self._im_info[0] / np.float32(self._feat_stride[0])))
+            # width = tf.to_int32(tf.ceil(self._im_info[1] / np.float32(self._feat_stride[0])))
+
             anchors, anchor_length = tf.py_func(generate_anchors_pre,
                                                 [height, width,
                                                  self._feat_stride,
@@ -162,7 +168,7 @@ class Network(object):
         net_conv = self._image_to_head(is_training)
         with tf.variable_scope(self._scope, self._scope):
             # build the anchors for the image
-            self._anchor_component()
+            self._anchor_component(net_conv)
             # region proposal network
             self._region_proposal(net_conv, is_training, initializer)
 

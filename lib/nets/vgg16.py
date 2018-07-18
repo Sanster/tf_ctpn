@@ -21,7 +21,6 @@ class vgg16(Network):
     def __init__(self):
         Network.__init__(self)
         self._feat_stride = [16, ]
-        self._feat_compress = [1. / float(self._feat_stride[0]), ]
         self._scope = 'vgg_16'
 
     def _image_to_head(self, is_training, reuse=None):

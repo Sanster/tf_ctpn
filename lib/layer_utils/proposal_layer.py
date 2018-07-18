@@ -13,7 +13,7 @@ from model.bbox_transform import bbox_transform_inv, clip_boxes
 from model.nms_wrapper import nms
 
 
-def proposal_layer(rpn_cls_prob, rpn_bbox_pred, im_info, cfg_key, _feat_stride, anchors, num_anchors):
+def proposal_layer(rpn_cls_prob, rpn_bbox_pred, im_info, cfg_key, anchors, num_anchors):
     """
     A simplified version compared to fast/er RCNN
     For details please see the technical report

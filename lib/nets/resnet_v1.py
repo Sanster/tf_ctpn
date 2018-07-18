@@ -49,7 +49,6 @@ class Resnetv1(Network):
     def __init__(self, num_layers=50):
         Network.__init__(self)
         self._feat_stride = [16, ]
-        self._feat_compress = [1. / float(self._feat_stride[0]), ]
         self._num_layers = num_layers
         self._scope = 'resnet_v1_%d' % num_layers
         self._decide_blocks()
