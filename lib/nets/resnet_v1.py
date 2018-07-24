@@ -131,14 +131,3 @@ class Resnetv1(Network):
 
         return variables_to_restore
 
-    def reverse_RGB_weights(self, sess, pretrained_model):
-        print('Fix Resnet V1 layers..')
-        with tf.variable_scope('Fix_Resnet_V1') as scope:
-            with tf.device("/cpu:0"):
-                # fix RGB to BGR
-                conv1_rgb = tf.get_variable("conv1_rgb", [7, 7, 3, 64], trainable=False)
-                restorer_fc = tf.train.Saver({self._scope + "/conv1/weights": conv1_rgb})
-                restorer_fc.restore(sess, pretrained_model)
-
-                sess.run(tf.assign(self._variables_to_fix[self._scope + '/conv1/weights:0'],
-                                   tf.reverse(conv1_rgb, [2])))

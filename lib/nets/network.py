@@ -393,9 +393,6 @@ class Network(object):
     def get_variables_to_restore(self, variables, var_keep_dic):
         raise NotImplementedError
 
-    def reverse_RGB_weights(self, sess, pretrained_model):
-        raise NotImplementedError
-
     # Extract the head feature maps, for example for vgg16 it is conv5_3
     # only useful during testing mode
     def extract_head(self, sess, image):

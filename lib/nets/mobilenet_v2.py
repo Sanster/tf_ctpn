@@ -34,15 +34,3 @@ class MobileNetV2(Network):
 
     def get_variables_to_restore(self, variables, var_keep_dic):
         pass
-
-    def reverse_RGB_weights(self, sess, pretrained_model):
-        print('Fix MobileNet V2 layers..')
-        with tf.variable_scope('Fix_MobileNet_V2') as scope:
-            with tf.device("/cpu:0"):
-                # fix RGB to BGR, and match the scale by (255.0 / 2.0)
-                Conv2d_0_rgb = tf.get_variable("Conv2d_0_rgb", [3, 3, 3, 32], trainable=False)
-                restorer_fc = tf.train.Saver({self._scope + "/Conv2d_0/weights": Conv2d_0_rgb})
-                restorer_fc.restore(sess, pretrained_model)
-
-                sess.run(tf.assign(self._variables_to_fix[self._scope + "/Conv2d_0/weights:0"],
-                                   tf.reverse(Conv2d_0_rgb / (255.0 / 2.0), [2])))

@@ -35,9 +35,6 @@ class SqueezeNet(Network):
     def get_variables_to_restore(self, variables, var_keep_dic):
         pass
 
-    def reverse_RGB_weights(self, sess, pretrained_model):
-        pass
-
     def _image_to_head(self, is_training, reuse=None):
         with slim.arg_scope(self._arg_scope(is_training, reuse)):
             net = slim.conv2d(self._image, 96, [3, 3], stride=1, scope='conv1')

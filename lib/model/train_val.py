@@ -197,8 +197,6 @@ class SolverWrapper(object):
 
             restorer = tf.train.Saver(variables_to_restore)
             restorer.restore(sess, self.pretrained_model)
-            # Reverse RGB weights of conv1 to BGR(slim pre-trained model are use RGB input, opencv use BGR)
-            self.net.reverse_RGB_weights(sess, self.pretrained_model)
 
             print('Loaded.')
 

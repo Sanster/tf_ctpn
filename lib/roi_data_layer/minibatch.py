@@ -16,6 +16,8 @@ import cv2
 from model.config import cfg
 from utils.blob import prep_im_for_blob, im_list_to_blob
 
+from utils import helper
+
 
 def get_minibatch(roidb, num_classes):
     """Given a roidb, construct a minibatch sampled from it."""
@@ -57,7 +59,7 @@ def _get_image_blob(roidb, scale_inds):
     processed_ims = []
     im_scales = []
     for i in range(num_images):
-        im = cv2.imread(roidb[i]['image'])
+        im = helper.read_rgb_img(roidb[i]['image'])
         if roidb[i]['flipped']:
             im = im[:, ::-1, :]
         target_size = cfg.TRAIN.SCALES[scale_inds[i]]

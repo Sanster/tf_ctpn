@@ -37,6 +37,8 @@ from nets.resnet_v1 import Resnetv1
 from nets.mobilenet_v1 import mobilenetv1
 from nets.squeezenet import SqueezeNet
 
+from utils import helper
+
 CLASSES = ('__background__', 'text')
 
 
@@ -120,7 +122,7 @@ def demo(sess, net, im_file, result_dir, viz=False, oriented=False):
     """Detect object classes in an image using pre-computed object proposals."""
 
     # Load the demo image
-    im = cv2.imread(im_file)
+    im = helper.read_rgb_img(im_file)
 
     # Detect all object classes and regress object bounds
     timer = Timer()

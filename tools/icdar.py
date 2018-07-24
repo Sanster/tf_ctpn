@@ -15,7 +15,7 @@ from model.nms_wrapper import nms
 from text_connector import TextDetector
 
 from utils.timer import Timer
-import tensorflow as tf
+import tensorflow as treadf
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -26,6 +26,7 @@ from nets.vgg16 import vgg16
 from nets.resnet_v1 import Resnetv1
 from nets.mobilenet_v1 import mobilenetv1
 
+from utils import helper
 CLASSES = ('__background__', 'text')
 
 
@@ -33,7 +34,7 @@ def demo(sess, net, im_file, icdar_dir, oriented=False, ltrb=False):
     """Detect object classes in an image using pre-computed object proposals."""
 
     # Load the demo image
-    im = cv2.imread(im_file)
+    im = helper.read_rgb_img(im_file)
 
     # Detect all object classes and regress object bounds
     timer = Timer()
