@@ -12,3 +12,4 @@ data/result/*
 !data/result/.keep
 submit.zip
 *.zip
+model/
