@@ -9,9 +9,9 @@ from __future__ import print_function
 
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
-from lib.nets.mobilenet import conv_blocks as ops
-from lib.nets.mobilenet import mobilenet as lib
-from lib.nets.mobilenet import mobilenet_v2 as mobilenet_v2
+from nets.mobilenet import conv_blocks as ops
+from nets.mobilenet import mobilenet as lib
+from nets.mobilenet import mobilenet_v2 as mobilenet_v2
 
 from nets.network import Network
 from model.config import cfg
@@ -26,6 +26,8 @@ class MobileNetV2(Network):
     def _image_to_head(self, is_training, reuse=None):
         with slim.arg_scope(mobilenet_v2.training_scope(is_training=is_training)):
             net, endpoints = mobilenet_v2.mobilenet_base(self._image)
+
+        self.variables_to_restore = slim.get_variables_to_restore()
 
         self._act_summaries.append(net)
         self._layers['head'] = net

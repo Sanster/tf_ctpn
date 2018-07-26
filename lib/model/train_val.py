@@ -178,6 +178,23 @@ class SolverWrapper(object):
 
         return lsf, nfiles, sfiles
 
+    def restore_ckpt_from_dir(self, sess, net, checkpoint_dir):
+        print("Restoring checkpoint from: " + checkpoint_dir)
+
+        ckpt = tf.train.latest_checkpoint(checkpoint_dir)
+        if ckpt is None:
+            print("Checkpoint not found")
+            exit(-1)
+
+        meta_file = ckpt + '.meta'
+        try:
+            print('Restore variables from {}'.format(ckpt))
+            print('Restore meta_filr from {}'.format(meta_file))
+            saver = tf.train.Saver(net.variables_to_restore)
+            saver.restore(sess, ckpt)
+        except Exception:
+            raise Exception("Can not restore from {}".format(checkpoint_dir))
+
     def initialize(self, sess):
         # Initial file lists are empty
         np_paths = []
@@ -188,17 +205,21 @@ class SolverWrapper(object):
         sess.run(tf.variables_initializer(variables, name='init'))
 
         if self.pretrained_model is not None:
-            # Fresh train directly from ImageNet weights
-            print('Loading initial model weights from {:s}'.format(self.pretrained_model))
+            if self.pretrained_model.endswith('.ckpt'):
+                # Fresh train directly from ImageNet weights
+                print('Loading initial model weights from {:s}'.format(self.pretrained_model))
 
-            var_keep_dic = self.get_variables_in_checkpoint_file(self.pretrained_model)
-            # Get the variables to restore, ignoring the variables to fix
-            variables_to_restore = self.net.get_variables_to_restore(variables, var_keep_dic)
+                var_keep_dic = self.get_variables_in_checkpoint_file(self.pretrained_model)
+                # Get the variables to restore, ignoring the variables to fix
+                variables_to_restore = self.net.get_variables_to_restore(variables, var_keep_dic)
 
-            restorer = tf.train.Saver(variables_to_restore)
-            restorer.restore(sess, self.pretrained_model)
-
-            print('Loaded.')
+                restorer = tf.train.Saver(variables_to_restore)
+                restorer.restore(sess, self.pretrained_model)
+                print('Loaded.')
+            else:
+                # Restore from checkpoint and meta file
+                self.restore_ckpt_from_dir(sess, self.net, self.pretrained_model)
+                print('Loaded.')
 
         last_snapshot_iter = 0
         rate = cfg.TRAIN.LEARNING_RATE

@@ -22,6 +22,7 @@ from nets.vgg16 import vgg16
 from nets.resnet_v1 import Resnetv1
 from nets.mobilenet_v1 import mobilenetv1
 from nets.squeezenet import SqueezeNet
+from nets.mobilenet_v2 import MobileNetV2
 
 
 def parse_args():
@@ -132,7 +133,7 @@ if __name__ == '__main__':
     elif args.net == 'res152':
         net = Resnetv1(num_layers=152)
     elif args.net == 'mobile':
-        net = mobilenetv1()
+        net = MobileNetV2()
     elif args.net == 'squeeze':
         net = SqueezeNet()
     else:
