@@ -159,18 +159,12 @@ class Network(object):
             self._anchor_length = anchor_length
 
     def _build_network(self, is_training=True):
-        # select initializers
-        if cfg.TRAIN.TRUNCATED:
-            initializer = tf.truncated_normal_initializer(mean=0.0, stddev=0.01)
-        else:
-            initializer = tf.random_normal_initializer(mean=0.0, stddev=0.01)
-
         net_conv = self._image_to_head(is_training)
-        with tf.variable_scope(self._scope, self._scope):
+        with tf.variable_scope("RPN"):
             # build the anchors for the image
             self._anchor_component(net_conv)
             # region proposal network
-            self._region_proposal(net_conv, is_training, initializer)
+            self._region_proposal(net_conv, is_training)
 
         self._score_summaries.update(self._predictions)
 
@@ -269,7 +263,9 @@ class Network(object):
 
         return regularizer
 
-    def _region_proposal(self, net_conv, is_training, initializer):
+    def _region_proposal(self, net_conv, is_training):
+        initializer = slim.xavier_initializer(uniform=True)
+
         rpn = slim.conv2d(net_conv, cfg.RPN_CHANNELS, [3, 3], trainable=is_training, weights_initializer=initializer,
                           scope="rpn_conv/3x3")
         self._act_summaries.append(rpn)

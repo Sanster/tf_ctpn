@@ -39,7 +39,7 @@ def main(args):
             # for node in input_graph_def.node:
             #     print(node.name)
 
-            output_node_names = ['vgg_16_1/rpn_bbox_pred/Conv2D', 'vgg_16_1/rpn_cls_score_reshape']
+            output_node_names = ['RPN/rpn_bbox_pred/Conv2D', 'RPN/rpn_cls_score_reshape']
 
             # We use a built-in TF helper to export variables to constants
             output_graph_def = tf.graph_util.convert_variables_to_constants(
