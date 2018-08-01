@@ -34,12 +34,11 @@ import argparse
 
 from nets.vgg16 import vgg16
 from nets.resnet_v1 import Resnetv1
-from nets.mobilenet_v1 import mobilenetv1
 from nets.squeezenet import SqueezeNet
+from nets.mobilenet_v2 import MobileNetV2
 
 from utils import helper
 
-from nets.mobilenet_v2 import MobileNetV2
 
 CLASSES = ('__background__', 'text')
 
@@ -132,6 +131,7 @@ def demo(sess, net, im_file, result_dir, viz=False, oriented=False):
     scores, boxes = im_detect(sess, net, im)
     timer.toc()
 
+    im = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
     img_name = im_file.split('/')[-1]
     draw_rpn_boxes(im, img_name, boxes, scores[:, np.newaxis], True, result_dir)
     draw_rpn_boxes(im, img_name, boxes, scores[:, np.newaxis], False, result_dir)
