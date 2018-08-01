@@ -130,6 +130,7 @@ class SolverWrapper(object):
             # Set learning rate and momentum
             lr = tf.Variable(cfg.TRAIN.LEARNING_RATE, trainable=False)
 
+
             if cfg.TRAIN.OPTIMIZER == 'Adam':
                 self.optimizer = tf.train.AdamOptimizer(lr)
             elif cfg.TRAIN.OPTIMIZER == 'Momentum':
@@ -146,7 +147,12 @@ class SolverWrapper(object):
                 grads, norm = tf.clip_by_global_norm(tf.gradients(total_loss, tvars), 10.0)
                 train_op = self.optimizer.apply_gradients(list(zip(grads, tvars)), global_step=global_step)
             else:
-                train_op = self.optimizer.minimize(total_loss, global_step=global_step)
+                # required by tf.layers.batch_normalization()
+                # add update ops(for moving_mean and moving_variance) as a dependency to the train_op
+                # https://www.tensorflow.org/api_docs/python/tf/layers/batch_normalization
+                update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+                with tf.control_dependencies(update_ops):
+                    train_op = self.optimizer.minimize(total_loss, global_step=global_step)
 
             # We will handle the snapshots ourselves
             self.saver = tf.train.Saver(max_to_keep=100000)
