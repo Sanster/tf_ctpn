@@ -35,9 +35,12 @@ def main(args):
 
             input_graph_def = tf.get_default_graph().as_graph_def()
 
-            # Print all node name in graph
-            # for node in input_graph_def.node:
-            #     print(node.name)
+            for node in input_graph_def.node:
+                if node.name == "vgg_16_1/rpn_bbox_pred/Conv2D":
+                    node.name = "RPN/rpn_bbox_pred/Conv2D"
+
+                if node.name == "vgg_16_1/rpn_cls_score_reshape":
+                    node.name = "RPN/rpn_cls_score_reshape"
 
             output_node_names = ['RPN/rpn_bbox_pred/Conv2D', 'RPN/rpn_cls_score_reshape']
 
