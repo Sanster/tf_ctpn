@@ -251,7 +251,7 @@ __C.MATLAB = 'matlab'
 __C.EXP_DIR = 'default'
 
 # Use GPU implementation of non-maximum suppression
-__C.USE_GPU_NMS = False
+__C.USE_GPU_NMS = True
 
 # Anchor scales for RPN
 __C.ANCHOR_SCALES = [8, 16, 32]
