@@ -42,7 +42,7 @@ def main(args):
                 if node.name == "vgg_16_1/rpn_cls_score_reshape":
                     node.name = "RPN/rpn_cls_score_reshape"
 
-            output_node_names = ['RPN/rpn_bbox_pred/Conv2D', 'RPN/rpn_cls_score_reshape']
+            output_node_names = ['RPN/rpn_bbox_pred/Conv2D', 'RPN/rpn_cls_prob_reshape']
 
             # We use a built-in TF helper to export variables to constants
             output_graph_def = tf.graph_util.convert_variables_to_constants(
