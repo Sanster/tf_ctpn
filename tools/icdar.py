@@ -79,7 +79,7 @@ def save_result_txt(text_lines, icdar_dir, im_file, ltrb=False):
 def parse_args():
     """Parse input arguments."""
     parser = argparse.ArgumentParser(description='Test images, and save result as ICDAR challenge format')
-    parser.add_argument('--net', dest='net', choices=['vgg16'], default='vgg16')
+    parser.add_argument('--net', dest='net', choices=['vgg16', 'res101'], default='vgg16')
     parser.add_argument('--img_dir', default='./data/demo')
     parser.add_argument('--dataset', dest='dataset', help='model tag', default='voc_2007_trainval')
     parser.add_argument('--tag', dest='tag', help='model tag', default='default')
