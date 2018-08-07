@@ -15,7 +15,7 @@ from model.nms_wrapper import nms
 from text_connector import TextDetector
 
 from utils.timer import Timer
-import tensorflow as treadf
+import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -24,7 +24,7 @@ import argparse
 
 from nets.vgg16 import vgg16
 from nets.resnet_v1 import Resnetv1
-from nets.mobilenet_v1 import mobilenetv1
+from nets.mobilenet_v2 import MobileNetV2
 
 from utils import helper
 CLASSES = ('__background__', 'text')
@@ -78,7 +78,7 @@ def save_result_txt(text_lines, icdar_dir, im_file, ltrb=False):
 
 def parse_args():
     """Parse input arguments."""
-    parser = argparse.ArgumentParser(description='Tensorflow CTPN demo')
+    parser = argparse.ArgumentParser(description='Test images, and save result as ICDAR challenge format')
     parser.add_argument('--net', dest='net', choices=['vgg16'], default='vgg16')
     parser.add_argument('--img_dir', default='./data/demo')
     parser.add_argument('--dataset', dest='dataset', help='model tag', default='voc_2007_trainval')
@@ -125,7 +125,7 @@ if __name__ == '__main__':
     elif netname == 'res101':
         net = Resnetv1(num_layers=101)
     elif netname == 'mobile':
-        net = mobilenetv1()
+        net = MobileNetV2()
     else:
         raise NotImplementedError
 
