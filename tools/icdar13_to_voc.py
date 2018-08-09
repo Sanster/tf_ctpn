@@ -5,6 +5,8 @@ import glob
 import shutil
 import numpy as np
 
+from tools.convert_utils import build_voc_dirs
+
 
 def generate_xml(img_name, lines, img_size, class_sets):
     doc = Document()
@@ -80,21 +82,6 @@ def _is_hard(cls, truncation, occlusion, x1, y1, x2, y2):
         hard = True
         return hard
     return hard
-
-
-def build_voc_dirs(outdir):
-    mkdir = lambda dir: os.makedirs(dir) if not os.path.exists(dir) else None
-    mkdir(outdir)
-    mkdir(os.path.join(outdir, 'Annotations'))
-    mkdir(os.path.join(outdir, 'ImageSets'))
-    mkdir(os.path.join(outdir, 'ImageSets', 'Layout'))
-    mkdir(os.path.join(outdir, 'ImageSets', 'Main'))
-    mkdir(os.path.join(outdir, 'ImageSets', 'Segmentation'))
-    mkdir(os.path.join(outdir, 'JPEGImages'))
-    mkdir(os.path.join(outdir, 'SegmentationClass'))
-    mkdir(os.path.join(outdir, 'SegmentationObject'))
-    return os.path.join(outdir, 'Annotations'), os.path.join(outdir, 'JPEGImages'), os.path.join(outdir, 'ImageSets',
-                                                                                                 'Main')
 
 
 if __name__ == '__main__':
