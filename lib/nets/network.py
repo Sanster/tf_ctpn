@@ -227,7 +227,7 @@ class Network(object):
 
         return total_loss
 
-    def _BiLstm(self, input, d_i, d_o, hidden_num, name, initializer, is_training=True):
+    def _BiLstm(self, input, d_i, hidden_num, name):
         img = input
         with tf.variable_scope(name) as scope:
             shape = tf.shape(img)
@@ -243,15 +243,7 @@ class Network(object):
 
             lstm_out = tf.reshape(lstm_out, [N * H * W, 2 * hidden_num])
 
-            outputs = slim.fully_connected(lstm_out, d_o,
-                                           weights_initializer=initializer,
-                                           weights_regularizer=tf.contrib.layers.l2_regularizer(cfg.TRAIN.WEIGHT_DECAY),
-                                           trainable=is_training,
-                                           activation_fn=None)
-
-            outputs = tf.reshape(outputs, [N, H, W, d_o])
-
-            return outputs
+            return lstm_out
 
     def _l2_regularizer(self, weight_decay=0.0005, scope=None):
         def regularizer(tensor):
@@ -270,23 +262,23 @@ class Network(object):
                           scope="rpn_conv/3x3")
         self._act_summaries.append(rpn)
 
-        lstm_output = 512
-        bi_lstm = self._BiLstm(rpn, cfg.RPN_CHANNELS, lstm_output, hidden_num=128, name="bi_lstm",
-                               initializer=initializer, is_training=is_training)
+        hidden_num = 128
+        # bi_lstm shape: [-1, hidden_num * 2]
+        bi_lstm = self._BiLstm(rpn, cfg.RPN_CHANNELS, hidden_num, name="bi_lstm")
 
-        # reshape to [N, H, W, C] for 1x1 conv operate
         shape = tf.shape(rpn)
         N, H, W, _ = shape[0], shape[1], shape[2], shape[3]
-        bi_lstm_reshape = tf.reshape(bi_lstm, [N, H, W, lstm_output])
+        bi_lstm_reshape = tf.reshape(bi_lstm, [N, H, W, hidden_num * 2])
+
+        fc = slim.conv2d(bi_lstm_reshape, 512, [1, 1], weights_initializer=initializer,
+                         padding='VALID', scope='conv_fc')
 
         # use 1x1 conv as FC (N, H, W, num_anchors * 2)
-        rpn_cls_score = slim.conv2d(bi_lstm_reshape, self._num_anchors * 2, [1, 1], trainable=is_training,
-                                    weights_initializer=initializer,
+        rpn_cls_score = slim.conv2d(fc, self._num_anchors * 2, [1, 1], weights_initializer=initializer,
                                     padding='VALID', activation_fn=None, scope='rpn_cls_score')
 
         # use 1x1 conv as FC (N, H, W, num_anchors * 4)
-        rpn_bbox_pred = slim.conv2d(bi_lstm_reshape, self._num_anchors * 4, [1, 1], trainable=is_training,
-                                    weights_initializer=initializer,
+        rpn_bbox_pred = slim.conv2d(fc, self._num_anchors * 4, [1, 1], weights_initializer=initializer,
                                     padding='VALID', activation_fn=None, scope='rpn_bbox_pred')
 
         # (N, H, W, num_anchors * 2) -> (N, H, W * num_anchors, 2)
