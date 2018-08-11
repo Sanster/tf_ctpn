@@ -66,7 +66,7 @@ __C.TRAIN.SUMMARY_INTERVAL = 30
 __C.TRAIN.SCALES = (600,)
 
 # Max pixel size of the longest side of a scaled input image
-__C.TRAIN.MAX_SIZE = 1000
+__C.TRAIN.MAX_SIZE = 1200
 
 # Images to use per minibatch
 __C.TRAIN.IMS_PER_BATCH = 1
@@ -123,7 +123,7 @@ __C.TRAIN.PROPOSAL_METHOD = 'gt'
 __C.TRAIN.RPN_POSITIVE_OVERLAP = 0.7
 
 # IOU < thresh: negative example
-__C.TRAIN.RPN_NEGATIVE_OVERLAP = 0.3
+__C.TRAIN.RPN_NEGATIVE_OVERLAP = 0.5
 
 # If an anchor satisfied by positive and negative conditions set to negative
 __C.TRAIN.RPN_CLOBBER_POSITIVES = False
@@ -132,7 +132,7 @@ __C.TRAIN.RPN_CLOBBER_POSITIVES = False
 __C.TRAIN.RPN_FG_FRACTION = 0.5
 
 # Total number of examples
-__C.TRAIN.RPN_BATCHSIZE = 256
+__C.TRAIN.RPN_BATCHSIZE = 128
 
 # NMS threshold used on RPN proposals
 __C.TRAIN.RPN_NMS_THRESH = 0.7
@@ -166,7 +166,7 @@ __C.TEST = edict()
 __C.TEST.SCALES = (600,)
 
 # Max pixel size of the longest side of a scaled input image
-__C.TEST.MAX_SIZE = 1000
+__C.TEST.MAX_SIZE = 1200
 
 # Overlap threshold used for non-maximum suppression (suppress boxes with
 # IoU >= this threshold)

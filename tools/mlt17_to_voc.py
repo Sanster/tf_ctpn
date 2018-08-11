@@ -28,19 +28,21 @@ text 可能有：
 
 DEBUG = False
 
-img_dir = '/home/cwq/data/MLT2017/training'
-gt_dir = '/home/cwq/data/MLT2017/training_gt'
+img_dir = '/home/cwq/data/MLT2017/val'
+gt_dir = '/home/cwq/data/MLT2017/val_gt'
 
-out_dir = '/home/cwq/data/MLT2017/mlt_voc'
+out_dir = '/home/cwq/data/MLT2017/mlt_voc2'
 IGNORE = '###\n'
-VALID_LANGUAGE = ['Latin', 'Chinese']
+
+# 允许 None，因为 None 会在后面检查 IGNORE 时被过滤掉
+VALID_LANGUAGE = ['Latin', 'Chinese', 'None']
 
 SCALE = 600
 MAX_SCALE_LENGTH = 1200
 step = 16
 
 # resize 以后允许的最小高度
-MIN_TEXT_HEIGHT = 10
+MIN_TEXT_HEIGHT = 5
 
 # resize 以后允许的 anchor 数量
 MIN_CONTINUE_ANCHORS = 0
@@ -48,18 +50,18 @@ MIN_CONTINUE_ANCHORS = 0
 # resize 以后允许text line区域最大的高宽比
 MAX_HEIGHT_WIDTH_SCALE = 4
 
+# 对文本行进行 split 后，允许最少的 anchor 数量
+MIN_ANCHOR_COUNT = 10
+
 global_k_is_none_count = 0
 
 
-def parse_line(pnts, im_scale, ltrb=True):
+def parse_line(pnts, im_scale):
     """
     :param pnts:
         "x1,y1,x2,y2,x3,y3,x4,y4,language,text"
         矩形四点坐标的顺序： left-top, right-top, right-bottom, left-bottom
-    :param ltrb: true, (xmin, ymin, xmax, ymax)
     :return:
-        (xmin, ymin, xmax, ymax), language, text
-        or
         (x1,y1,x2,y2,x3,y3,x4,y4), language, text
     """
     splited_line = pnts.split(',')
@@ -69,22 +71,10 @@ def parse_line(pnts, im_scale, ltrb=True):
     for i in range(8):
         splited_line[i] = int(int(splited_line[i]) * im_scale)
 
-        if splited_line[-1] == IGNORE:
-            return None
-
-    xmin, ymin, xmax, ymax = get_ltrb(splited_line[:8])
-
-    # 忽略高度超过宽度很多的文字
-    if (ymax - ymin) > 5 * (xmax - xmin):
-        return None
-
-    if ltrb:
-        pnts = (xmin, ymin, xmax, ymax)
-    else:
-        pnts = (splited_line[0], splited_line[1],
-                splited_line[2], splited_line[3],
-                splited_line[4], splited_line[5],
-                splited_line[6], splited_line[7])
+    pnts = (splited_line[0], splited_line[1],
+            splited_line[2], splited_line[3],
+            splited_line[4], splited_line[5],
+            splited_line[6], splited_line[7])
 
     return pnts, splited_line[-2], splited_line[-1]
 
@@ -440,17 +430,30 @@ def main():
         with open(gt_file, 'r') as f:
             lines = f.readlines()
 
-        parsed_lines = [parse_line(line, im_scale, ltrb=False) for line in lines]
-        parsed_lines = list(filter(lambda x: x is not None, parsed_lines))
+        parsed_lines = [parse_line(line, im_scale) for line in lines]
 
-        if len(parsed_lines) == 0 or not all(x[1] in VALID_LANGUAGE for x in parsed_lines):
+        if len(parsed_lines) == 0 or \
+                not all(x[1] in VALID_LANGUAGE for x in parsed_lines):  # 保证图片中只有 latin/chinese
             print("Skip image: %s" % img_name)
             continue
+
+        parsed_lines = list(filter(lambda x: x[2] != IGNORE, parsed_lines))
+
+        # 过滤掉高度过高或者过小的文本行
+        tmp = []
+        for l in parsed_lines:
+            xmin, ymin, xmax, ymax = get_ltrb(l[0])
+            h = ymax - ymin
+            w = xmax - xmin
+            if MIN_TEXT_HEIGHT < h < MAX_HEIGHT_WIDTH_SCALE * w:
+                tmp.append(l)
+
+        parsed_lines = tmp
 
         resize_img = cv2.resize(img, None, None, fx=im_scale, fy=im_scale, interpolation=cv2.INTER_AREA)
         resize_img_size = resize_img.shape
 
-        splited_lines = []
+        anchors = []
         for line in parsed_lines:
             temp_splited_lines = split_text_line2(line[0], step, resize_img)
 
@@ -459,16 +462,16 @@ def main():
             if len(temp_splited_lines) <= MIN_CONTINUE_ANCHORS:
                 continue
 
-            splited_lines.extend(temp_splited_lines)
+            anchors.extend(temp_splited_lines)
 
-        if len(splited_lines) == 0:
+        if len(anchors) <= MIN_ANCHOR_COUNT:
             print("Skip image: %s" % img_name)
             continue
 
         print("Process image: %s" % img_name)
         out_img_name = '{}_{}.jpg'.format(setname, stem)
         cv2.imwrite(os.path.join(dest_img_dir, out_img_name), resize_img)
-        doc, objs = generate_xml(out_img_name, splited_lines, resize_img_size, 'icdar_mlt17_%s' % setname)
+        doc, objs = generate_xml(out_img_name, anchors, resize_img_size, 'icdar_mlt17_%s' % setname)
 
         xmlfile = os.path.join(dest_label_dir, '{}_{}.xml'.format(setname, stem))
 
