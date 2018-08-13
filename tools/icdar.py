@@ -27,6 +27,9 @@ from nets.resnet_v1 import Resnetv1
 from nets.mobilenet_v2 import MobileNetV2
 
 from utils import helper
+
+from demo import recover_scale
+
 CLASSES = ('__background__', 'text')
 
 
@@ -39,15 +42,18 @@ def demo(sess, net, im_file, icdar_dir, oriented=False, ltrb=False):
     # Detect all object classes and regress object bounds
     timer = Timer()
     timer.tic()
-    scores, boxes = im_detect(sess, net, im)
+    scores, boxes, resized_im_shape, im_scale = im_detect(sess, net, im)
     timer.toc()
 
     # Run TextDetector to merge small box
     line_detector = TextDetector(oriented)
 
     # text_lines point order: left-top, right-top, left-bottom, right-bottom
-    text_lines = line_detector.detect(boxes, scores[:, np.newaxis], im.shape[:2])
+    text_lines = line_detector.detect(boxes, scores[:, np.newaxis], resized_im_shape)
     print("Image %s, detect %d text lines in %.3fs" % (im_file, len(text_lines), timer.diff))
+
+    if len(text_lines) != 0:
+        text_lines = recover_scale(text_lines, im_scale)
 
     return save_result_txt(text_lines, icdar_dir, im_file, ltrb)
 

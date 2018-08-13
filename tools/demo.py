@@ -39,7 +39,6 @@ from nets.mobilenet_v2 import MobileNetV2
 
 from utils import helper
 
-
 CLASSES = ('__background__', 'text')
 
 
@@ -96,10 +95,24 @@ def save_result(img, img_name, text_lines, result_dir):
     cv2.imwrite(img_path, dst)
 
 
-def draw_rpn_boxes(img, img_name, boxes, scores, nms, save_dir):
+def recover_scale(boxes, scale):
+    """
+    :param boxes: [(x1, y1, x2, y2)]
+    :param scale: image scale
+    :return:
+    """
+    tmp_boxes = []
+    for b in boxes:
+        tmp_boxes.append([int(x / scale) for x in b])
+    return np.asarray(tmp_boxes).astype(np.float32)
+
+
+def draw_rpn_boxes(img, img_name, boxes, scores, im_scale, nms, save_dir):
     """
     :param boxes: [(x1, y1, x2, y2)]
     """
+    boxes = recover_scale(boxes, im_scale)
+
     base_name = img_name.split('/')[-1]
     color = (0, 255, 0)
     out = img.copy()
@@ -128,22 +141,27 @@ def demo(sess, net, im_file, result_dir, viz=False, oriented=False):
     # Detect all object classes and regress object bounds
     timer = Timer()
     timer.tic()
-    scores, boxes = im_detect(sess, net, im)
+    scores, boxes, resized_im_shape, im_scale = im_detect(sess, net, im)
     timer.toc()
 
     im = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
     img_name = im_file.split('/')[-1]
-    draw_rpn_boxes(im, img_name, boxes, scores[:, np.newaxis], True, result_dir)
-    draw_rpn_boxes(im, img_name, boxes, scores[:, np.newaxis], False, result_dir)
+
+    draw_rpn_boxes(im, img_name, boxes, scores[:, np.newaxis], im_scale, True, result_dir)
+    draw_rpn_boxes(im, img_name, boxes, scores[:, np.newaxis], im_scale, False, result_dir)
 
     # Run TextDetector to merge small box
     line_detector = TextDetector(oriented)
 
+    # line_detector 的输入必须是在 scale 之后的图片上！！，
+    # 如果还原了以后再进行行构建，原图可能太大，导致每个 anchor 的 width 很大，导致 MAX_HORIZONTAL_GAP 太小
     # text_lines point order: left-top, right-top, left-bottom, right-bottom
-    text_lines = line_detector.detect(boxes, scores[:, np.newaxis], im.shape[:2])
+    text_lines = line_detector.detect(boxes, scores[:, np.newaxis], resized_im_shape)
     print("Image %s, detect %d text lines in %.3fs" % (im_file, len(text_lines), timer.diff))
 
-    save_result(im, img_name, text_lines, result_dir)
+    if len(text_lines) != 0:
+        text_lines = recover_scale(text_lines, im_scale)
+        save_result(im, img_name, text_lines, result_dir)
 
     # Visualize detections
     if viz:
@@ -154,9 +172,9 @@ def parse_args():
     """Parse input arguments."""
     parser = argparse.ArgumentParser(description='Tensorflow CTPN demo')
     parser.add_argument('--net', dest='net', choices=['vgg16', 'squeeze', 'mobile'], default='vgg16')
-    parser.add_argument('--img_dir', default='./data/demo')
+    parser.add_argument('--img_dir', default='/home/cwq/data/ICDAR13/123')
     parser.add_argument('--dataset', dest='dataset', help='model tag', default='voc_2007_trainval')
-    parser.add_argument('--tag', dest='tag', help='model tag', default='default')
+    parser.add_argument('--tag', dest='tag', help='model tag', default='vgg_latin_chn_newdata')
     parser.add_argument('--viz', action='store_true', default=False, help='show result')
     parser.add_argument('-o', '--oriented', action='store_true', default=False, help='output rotated detect box')
     args = parser.parse_args()

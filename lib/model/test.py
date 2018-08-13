@@ -85,15 +85,14 @@ def im_detect(sess, net, im):
     blobs, im_scales = _get_blobs(im)
     assert len(im_scales) == 1, "Only single-image batch implemented"
 
-    im_blob = blobs['data']
-    blobs['im_info'] = np.array([im_blob.shape[1], im_blob.shape[2], im_scales[0]], dtype=np.float32)
+    resized_im_blob = blobs['data']
+    blobs['im_info'] = np.array([resized_im_blob.shape[1], resized_im_blob.shape[2], im_scales[0]], dtype=np.float32)
 
     rois = net.test_image(sess, blobs['data'], blobs['im_info'])
 
-    boxes = rois[:, 1:5] / im_scales[0]
-    pred_boxes = _clip_boxes(boxes, im.shape)
+    boxes = rois[:, 1:5]
+    boxes = _clip_boxes(boxes, resized_im_blob.shape[1:3])
 
     scores = rois[:, 0]
 
-    return scores, pred_boxes
-
+    return scores, boxes, resized_im_blob.shape[1:3], im_scales[0]
