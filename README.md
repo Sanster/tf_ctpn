@@ -6,6 +6,8 @@ This is a practice project to learn how CTPN works. Most of codes in this projec
 - CTPN paper: https://arxiv.org/abs/1609.03605
 - CTPN source: https://github.com/tianzhi0549/CTPN
 
+If you want an end to end OCR service, check this repo: https://github.com/Sanster/DeepOcrService
+
 # Setup
 Install dependencies:
 ```
