@@ -70,6 +70,8 @@ def _get_blobs(im):
 
 def _clip_boxes(boxes, im_shape):
     """Clip boxes to image boundaries."""
+    if len(boxes) == 0:
+        return boxes
     # x1 >= 0
     boxes[:, 0::4] = np.maximum(boxes[:, 0::4], 0)
     # y1 >= 0
